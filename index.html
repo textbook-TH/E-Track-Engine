@@ -382,7 +382,7 @@
                         </div>
                         <div>
                             <p class="text-2xs text-blue-200">เข้าสู่ระบบในชื่อ</p>
-                            <p class="text-xs font-semibold text-white" id="teacherLoggedInEmail">teacher@kmitl.ac.th</p>
+                            <p class="text-xs font-semibold text-white" id="teacherLoggedInEmail">-</p>
                         </div>
                     </div>
                 </div>
@@ -801,15 +801,13 @@
 
             return {
                 SUPABASE_URL: window.APP_CONFIG?.SUPABASE_URL || decodeSecret("aHR0cHM6Ly9kdnp6cHVvcnl0ZHZkYXdvbGtlbi5zdXBhYmFzZS5jbw=="),
-                SUPABASE_KEY: window.APP_CONFIG?.SUPABASE_KEY || decodeSecret("c2JfcHVibGlzaGFibGVfVEstbV9wTWNVU25xOWgyTGYxVDNiUV9iVXJTcGQ0SA=="),
-                STAFF_EMAIL: window.APP_CONFIG?.STAFF_EMAIL || decodeSecret("dGV4dGJvb2tAa21pdGwuYWMudGg=")
+                SUPABASE_KEY: window.APP_CONFIG?.SUPABASE_KEY || decodeSecret("c2JfcHVibGlzaGFibGVfVEstbV9wTWNVU25xOWgyTGYxVDNiUV9iVXJTcGQ0SA==")
             };
         };
 
         const APP_ENV = getSecureConfig();
         const SUPABASE_URL = APP_ENV.SUPABASE_URL;
         const SUPABASE_KEY = APP_ENV.SUPABASE_KEY;
-        const STAFF_EMAIL = APP_ENV.STAFF_EMAIL;
 
         // Initialize Supabase Client
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -903,15 +901,14 @@
             const cleanEmail = email.toLowerCase().trim();
 
             if (adminList && adminList.length > 0) {
-                const match = adminList.some(item => {
+                return adminList.some(item => {
                     const itemEmail = (item.email || item.admin_email || '').toLowerCase().trim();
                     const itemId = item.user_id || item.id || item.uuid;
-                    return (itemEmail && itemEmail === cleanEmail) || (userId && itemId && itemId === userId);
+                    return (itemEmail && itemEmail === cleanEmail) || (userId && itemId && String(itemId) === String(userId));
                 });
-                if (match) return true;
             }
 
-            return cleanEmail === STAFF_EMAIL.toLowerCase().trim();
+            return false;
         }
 
         /**
@@ -1884,7 +1881,9 @@
 
             if (staffFilteredData.length === 0) {
                 if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="text-center py-12 text-slate-400 font-light">ไม่พบข้อมูลในระบบ</td></tr>`;
-                if (mobileContainer) mobileContainer.innerHTML = `<div class="text-center py-12 text-slate-400 font-light bg-white rounded-2xl border border-slate-100">ไม่พบข้อมูลในระบบ</div>`;
+                if (mobileContainer) {
+                    mobileContainer.innerHTML = `<div class="text-center py-12 text-slate-400 font-light bg-white rounded-2xl border border-slate-100">ไม่พบข้อมูลในระบบ</div>`;
+                }
                 renderPaginationControls('staffPagination', 1, 0, 'changeStaffPage');
                 return;
             }
@@ -1895,10 +1894,13 @@
             if (tbody) {
                 tbody.innerHTML = pageData.map(item => {
                     const authorFull = `${item.academic_position || ''} ${item.author_name || ''}`.trim();
+                    const fileOrig = convertGoogleDriveLink(item.file_original_url);
+                    const fileCover = convertGoogleDriveLink(item.file_cover_url);
+                    const fileReport = convertGoogleDriveLink(item.file_eval_report_url);
 
                     return `
                     <tr class="hover:bg-slate-50/80 transition-colors">
-                        <td class="py-4 px-4 font-bold text-blue-600 font-mono text-xs align-top whitespace-nowrap">
+                        <td class="py-4 px-4 font-bold text-blue-600 font-mono text-xs align-top cursor-pointer hover:underline whitespace-nowrap" onclick="openDetailModal(${item.id})">
                             ${item.book_code || '-'}
                         </td>
                         <td class="py-4 px-4 align-top whitespace-nowrap">
@@ -1906,23 +1908,28 @@
                         </td>
                         <td class="py-4 px-4 align-top">
                             <div class="space-y-1">
-                                <p class="font-bold text-slate-900 text-sm">${item.title || '-'}</p>
-                                <p class="text-xs text-slate-500">${authorFull ? `<i class="fa-solid fa-user-pen mr-1"></i>${authorFull}` : ''} ${item.department ? `| ${item.department}` : ''}</p>
+                                <span class="font-bold text-slate-900 text-sm leading-snug block">${item.title || '-'}</span>
+                                <div class="text-xs text-slate-500 space-x-2">
+                                    <span>${authorFull} (${item.author_email || '-'})</span>
+                                    <span>• ${item.department || '-'}</span>
+                                    <span>• ปี ${item.evaluation_year || '-'}</span>
+                                </div>
                             </div>
                         </td>
                         <td class="py-4 px-4 align-top whitespace-nowrap">
                             <div class="flex items-center space-x-1.5">
-                                ${item.file_original_url ? `<a href="${convertGoogleDriveLink(item.file_original_url)}" target="_blank" title="ไฟล์ต้นฉบับ" class="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center hover:bg-blue-100 transition-colors"><i class="fa-solid fa-file-pdf text-xs"></i></a>` : ''}
-                                ${item.file_cover_url ? `<a href="${convertGoogleDriveLink(item.file_cover_url)}" target="_blank" title="ไฟล์ปก" class="w-8 h-8 bg-amber-50 text-amber-600 rounded-lg flex items-center justify-center hover:bg-amber-100 transition-colors"><i class="fa-solid fa-image text-xs"></i></a>` : ''}
-                                ${item.file_eval_report_url ? `<a href="${convertGoogleDriveLink(item.file_eval_report_url)}" target="_blank" title="รายงานผลการประเมิน" class="w-8 h-8 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center hover:bg-emerald-100 transition-colors"><i class="fa-solid fa-file-lines text-xs"></i></a>` : ''}
+                                ${fileOrig ? `<a href="${fileOrig}" target="_blank" title="ดาวน์โหลดหนังสือต้นฉบับ" class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white flex items-center justify-center text-xs transition-colors"><i class="fa-solid fa-file-lines"></i></a>` : ''}
+                                ${fileCover ? `<a href="${fileCover}" target="_blank" title="ดาวน์โหลดปกหนังสือ" class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white flex items-center justify-center text-xs transition-colors"><i class="fa-solid fa-image"></i></a>` : ''}
+                                ${fileReport ? `<a href="${fileReport}" target="_blank" title="ดาวน์โหลดผลการประเมิน" class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-600 hover:text-white flex items-center justify-center text-xs transition-colors"><i class="fa-solid fa-file-pdf"></i></a>` : ''}
+                                ${(!fileOrig && !fileCover && !fileReport) ? '<span class="text-xs text-slate-400 font-light">ไม่มีไฟล์</span>' : ''}
                             </div>
                         </td>
-                        <td class="py-4 px-4 text-center align-top whitespace-nowrap">
+                        <td class="py-4 px-4 align-top text-center whitespace-nowrap">
                             <div class="flex items-center justify-center space-x-1">
-                                <button onclick="openEditModal(${item.id})" title="แก้ไข" class="p-2 text-slate-500 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors">
+                                <button onclick="openEditModal(${item.id})" title="แก้ไข" class="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 hover:bg-blue-600 hover:text-white flex items-center justify-center text-xs transition-colors">
                                     <i class="fa-solid fa-pen-to-square"></i>
                                 </button>
-                                <button onclick="openDeleteModal(${item.id})" title="ลบ" class="p-2 text-slate-500 hover:text-rose-600 hover:bg-slate-100 rounded-lg transition-colors">
+                                <button onclick="openDeleteModal(${item.id})" title="ลบ" class="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 hover:bg-rose-600 hover:text-white flex items-center justify-center text-xs transition-colors">
                                     <i class="fa-solid fa-trash-can"></i>
                                 </button>
                             </div>
@@ -1933,26 +1940,35 @@
             }
 
             if (mobileContainer) {
-                mobileContainer.innerHTML = pageData.map(item => `
+                mobileContainer.innerHTML = pageData.map(item => {
+                    const authorFull = `${item.academic_position || ''} ${item.author_name || ''}`.trim();
+                    const fileOrig = convertGoogleDriveLink(item.file_original_url);
+                    const fileCover = convertGoogleDriveLink(item.file_cover_url);
+                    const fileReport = convertGoogleDriveLink(item.file_eval_report_url);
+
+                    return `
                     <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3">
                         <div class="flex items-center justify-between">
-                            <span class="px-2.5 py-1 bg-blue-50 text-blue-600 font-bold font-mono text-xs rounded-lg">${item.book_code || '-'}</span>
+                            <span class="font-bold text-blue-600 font-mono text-xs">${item.book_code || '-'}</span>
                             ${getStatusBadge(item.evaluation_status)}
                         </div>
-                        <h4 class="font-bold text-slate-900 text-sm">${item.title || '-'}</h4>
-                        <div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
-                            <div class="flex space-x-1">
-                                ${item.file_original_url ? `<a href="${convertGoogleDriveLink(item.file_original_url)}" target="_blank" class="px-2 py-1 bg-blue-50 text-blue-600 rounded">ต้นฉบับ</a>` : ''}
-                                ${item.file_cover_url ? `<a href="${convertGoogleDriveLink(item.file_cover_url)}" target="_blank" class="px-2 py-1 bg-amber-50 text-amber-600 rounded">ปก</a>` : ''}
-                                ${item.file_eval_report_url ? `<a href="${convertGoogleDriveLink(item.file_eval_report_url)}" target="_blank" class="px-2 py-1 bg-emerald-50 text-emerald-600 rounded">รายงาน</a>` : ''}
+                        <h4 class="font-bold text-slate-900 text-sm leading-snug" onclick="openDetailModal(${item.id})">${item.title || '-'}</h4>
+                        <p class="text-xs text-slate-500">${authorFull} (${item.author_email || '-'})</p>
+
+                        <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+                            <div class="flex items-center space-x-1">
+                                ${fileOrig ? `<a href="${fileOrig}" target="_blank" class="px-2 py-1 bg-blue-50 text-blue-600 text-xs rounded-lg font-medium"><i class="fa-solid fa-file-lines mr-1"></i>ต้นฉบับ</a>` : ''}
+                                ${fileCover ? `<a href="${fileCover}" target="_blank" class="px-2 py-1 bg-emerald-50 text-emerald-600 text-xs rounded-lg font-medium"><i class="fa-solid fa-image mr-1"></i>ปก</a>` : ''}
+                                ${fileReport ? `<a href="${fileReport}" target="_blank" class="px-2 py-1 bg-purple-50 text-purple-600 text-xs rounded-lg font-medium"><i class="fa-solid fa-file-pdf mr-1"></i>ผลประเมิน</a>` : ''}
                             </div>
-                            <div class="flex space-x-1">
-                                <button onclick="openEditModal(${item.id})" class="px-2.5 py-1 bg-slate-100 text-slate-700 rounded font-medium">แก้ไข</button>
-                                <button onclick="openDeleteModal(${item.id})" class="px-2.5 py-1 bg-rose-50 text-rose-600 rounded font-medium">ลบ</button>
+                            <div class="flex items-center space-x-1">
+                                <button onclick="openEditModal(${item.id})" class="p-1.5 text-slate-500 hover:text-blue-600"><i class="fa-solid fa-pen-to-square"></i></button>
+                                <button onclick="openDeleteModal(${item.id})" class="p-1.5 text-slate-500 hover:text-rose-600"><i class="fa-solid fa-trash-can"></i></button>
                             </div>
                         </div>
                     </div>
-                `).join('');
+                    `;
+                }).join('');
             }
 
             renderPaginationControls('staffPagination', staffCurrentPage, staffFilteredData.length, 'changeStaffPage');
@@ -1960,12 +1976,11 @@
 
         // --- TEACHER VIEW FUNCTIONS ---
         function filterTeacherData() {
-            if (!currentUser || !currentUser.email) return;
+            if (!currentUser || currentUser.role !== 'teacher') return;
+            const userEmail = (currentUser.email || '').toLowerCase().trim();
+            const teacherLoggedInEmailEl = document.getElementById('teacherLoggedInEmail');
+            if (teacherLoggedInEmailEl) teacherLoggedInEmailEl.innerText = userEmail;
 
-            const teacherEmailSpan = document.getElementById('teacherLoggedInEmail');
-            if (teacherEmailSpan) teacherEmailSpan.innerText = currentUser.email;
-
-            const userEmail = currentUser.email.toLowerCase().trim();
             let rawFiltered = evaluationsData.filter(item => {
                 const authorEmail = (item.author_email || '').toLowerCase().trim();
                 return authorEmail === userEmail;
@@ -1984,8 +1999,10 @@
             if (countText) countText.innerText = teacherFilteredData.length;
 
             if (teacherFilteredData.length === 0) {
-                if (tbody) tbody.innerHTML = `<tr><td colspan="4" class="text-center py-12 text-slate-400 font-light">ไม่พบผลงานที่ตรงกับอีเมลของคุณ</td></tr>`;
-                if (mobileContainer) mobileContainer.innerHTML = `<div class="text-center py-12 text-slate-400 font-light bg-white rounded-2xl border border-slate-100">ไม่พบผลงานที่ตรงกับอีเมลของคุณ</div>`;
+                if (tbody) tbody.innerHTML = `<tr><td colspan="4" class="text-center py-12 text-slate-400 font-light">ไม่พบผลงานที่ลงทะเบียนด้วยอีเมลของคุณ</td></tr>`;
+                if (mobileContainer) {
+                    mobileContainer.innerHTML = `<div class="text-center py-12 text-slate-400 font-light bg-white rounded-2xl border border-slate-100">ไม่พบผลงานที่ลงทะเบียนด้วยอีเมลของคุณ</div>`;
+                }
                 renderPaginationControls('teacherPagination', 1, 0, 'changeTeacherPage');
                 return;
             }
@@ -1994,45 +2011,75 @@
             const pageData = teacherFilteredData.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
             if (tbody) {
-                tbody.innerHTML = pageData.map(item => `
+                tbody.innerHTML = pageData.map(item => {
+                    const authorFull = `${item.academic_position || ''} ${item.author_name || ''}`.trim();
+                    const fileOrig = convertGoogleDriveLink(item.file_original_url);
+                    const fileCover = convertGoogleDriveLink(item.file_cover_url);
+                    const fileReport = convertGoogleDriveLink(item.file_eval_report_url);
+
+                    return `
                     <tr class="hover:bg-slate-50/80 transition-colors">
-                        <td class="py-4 px-4 font-bold text-blue-600 font-mono text-xs align-top whitespace-nowrap">${item.book_code || '-'}</td>
-                        <td class="py-4 px-4 align-top whitespace-nowrap">${getStatusBadge(item.evaluation_status)}</td>
+                        <td class="py-4 px-4 font-bold text-blue-600 font-mono text-xs align-top cursor-pointer hover:underline whitespace-nowrap" onclick="openDetailModal(${item.id})">
+                            ${item.book_code || '-'}
+                        </td>
+                        <td class="py-4 px-4 align-top whitespace-nowrap">
+                            ${getStatusBadge(item.evaluation_status)}
+                        </td>
                         <td class="py-4 px-4 align-top">
-                            <p class="font-bold text-slate-900 text-sm">${item.title || '-'}</p>
-                            <p class="text-xs text-slate-500 mt-0.5">ปีประเมิน: ${item.evaluation_year || '-'} | ภาควิชา: ${item.department || '-'}</p>
+                            <div class="space-y-1">
+                                <span class="font-bold text-slate-900 text-sm leading-snug block">${item.title || '-'}</span>
+                                <div class="text-xs text-slate-500 space-x-2">
+                                    <span>${authorFull}</span>
+                                    <span>• ${item.department || '-'}</span>
+                                    <span>• ปี ${item.evaluation_year || '-'}</span>
+                                </div>
+                            </div>
                         </td>
                         <td class="py-4 px-4 align-top whitespace-nowrap">
                             <div class="flex items-center space-x-1.5">
-                                ${item.file_original_url ? `<a href="${convertGoogleDriveLink(item.file_original_url)}" target="_blank" class="px-2.5 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-semibold rounded-lg flex items-center space-x-1 transition-colors"><i class="fa-solid fa-download"></i><span>ต้นฉบับ</span></a>` : ''}
-                                ${item.file_eval_report_url ? `<a href="${convertGoogleDriveLink(item.file_eval_report_url)}" target="_blank" class="px-2.5 py-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 text-xs font-semibold rounded-lg flex items-center space-x-1 transition-colors"><i class="fa-solid fa-file-lines"></i><span>รายงาน</span></a>` : ''}
+                                ${fileOrig ? `<a href="${fileOrig}" target="_blank" title="ดาวน์โหลดหนังสือต้นฉบับ" class="px-2.5 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg text-xs font-medium flex items-center space-x-1 transition-colors"><i class="fa-solid fa-file-lines"></i><span>ต้นฉบับ</span></a>` : ''}
+                                ${fileCover ? `<a href="${fileCover}" target="_blank" title="ดาวน์โหลดปกหนังสือ" class="px-2.5 py-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-lg text-xs font-medium flex items-center space-x-1 transition-colors"><i class="fa-solid fa-image"></i><span>ปก</span></a>` : ''}
+                                ${fileReport ? `<a href="${fileReport}" target="_blank" title="ดาวน์โหลดผลการประเมิน" class="px-2.5 py-1.5 bg-purple-50 text-purple-600 hover:bg-purple-600 hover:text-white rounded-lg text-xs font-medium flex items-center space-x-1 transition-colors"><i class="fa-solid fa-file-pdf"></i><span>ผลประเมิน</span></a>` : ''}
+                                ${(!fileOrig && !fileCover && !fileReport) ? '<span class="text-xs text-slate-400 font-light">ไม่มีไฟล์</span>' : ''}
                             </div>
                         </td>
                     </tr>
-                `).join('');
+                    `;
+                }).join('');
             }
 
             if (mobileContainer) {
-                mobileContainer.innerHTML = pageData.map(item => `
+                mobileContainer.innerHTML = pageData.map(item => {
+                    const authorFull = `${item.academic_position || ''} ${item.author_name || ''}`.trim();
+                    const fileOrig = convertGoogleDriveLink(item.file_original_url);
+                    const fileCover = convertGoogleDriveLink(item.file_cover_url);
+                    const fileReport = convertGoogleDriveLink(item.file_eval_report_url);
+
+                    return `
                     <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3">
                         <div class="flex items-center justify-between">
-                            <span class="px-2.5 py-1 bg-blue-50 text-blue-600 font-bold font-mono text-xs rounded-lg">${item.book_code || '-'}</span>
+                            <span class="font-bold text-blue-600 font-mono text-xs">${item.book_code || '-'}</span>
                             ${getStatusBadge(item.evaluation_status)}
                         </div>
-                        <h4 class="font-bold text-slate-900 text-sm">${item.title || '-'}</h4>
-                        <div class="flex items-center space-x-2 pt-2 border-t border-slate-100">
-                            ${item.file_original_url ? `<a href="${convertGoogleDriveLink(item.file_original_url)}" target="_blank" class="px-3 py-1.5 bg-blue-50 text-blue-600 text-xs font-semibold rounded-lg flex items-center space-x-1"><i class="fa-solid fa-download"></i><span>โหลดต้นฉบับ</span></a>` : ''}
-                            ${item.file_eval_report_url ? `<a href="${convertGoogleDriveLink(item.file_eval_report_url)}" target="_blank" class="px-3 py-1.5 bg-emerald-50 text-emerald-600 text-xs font-semibold rounded-lg flex items-center space-x-1"><i class="fa-solid fa-file-lines"></i><span>โหลดรายงาน</span></a>` : ''}
+                        <h4 class="font-bold text-slate-900 text-sm leading-snug" onclick="openDetailModal(${item.id})">${item.title || '-'}</h4>
+                        <p class="text-xs text-slate-500">${authorFull}</p>
+
+                        <div class="flex items-center space-x-2 pt-2 border-t border-slate-100 overflow-x-auto">
+                            ${fileOrig ? `<a href="${fileOrig}" target="_blank" class="px-2.5 py-1 bg-blue-50 text-blue-600 text-xs rounded-lg font-medium whitespace-nowrap"><i class="fa-solid fa-file-lines mr-1"></i>ต้นฉบับ</a>` : ''}
+                            ${fileCover ? `<a href="${fileCover}" target="_blank" class="px-2.5 py-1 bg-emerald-50 text-emerald-600 text-xs rounded-lg font-medium whitespace-nowrap"><i class="fa-solid fa-image mr-1"></i>ปก</a>` : ''}
+                            ${fileReport ? `<a href="${fileReport}" target="_blank" class="px-2.5 py-1 bg-purple-50 text-purple-600 text-xs rounded-lg font-medium whitespace-nowrap"><i class="fa-solid fa-file-pdf mr-1"></i>ผลประเมิน</a>` : ''}
                         </div>
                     </div>
-                `).join('');
+                    `;
+                }).join('');
             }
 
             renderPaginationControls('teacherPagination', teacherCurrentPage, teacherFilteredData.length, 'changeTeacherPage');
         }
 
-        // --- CRUD operations ---
+        // --- FORM MODAL & CRUD ACTIONS ---
         function openAddModal() {
+            document.getElementById('formModalTitle').innerText = 'เพิ่มผลงานใหม่';
             document.getElementById('formEditId').value = '';
             document.getElementById('formYear').value = new Date().getFullYear() + 543;
             document.getElementById('formAcademicPos').value = '';
@@ -2051,7 +2098,6 @@
             document.getElementById('formFileCover').value = '';
             document.getElementById('formFileEvalReport').value = '';
 
-            document.getElementById('formModalTitle').innerText = 'เพิ่มผลงานใหม่';
             openModal('editModal');
         }
 
@@ -2059,12 +2105,13 @@
             const item = evaluationsData.find(i => i.id === id);
             if (!item) return;
 
+            document.getElementById('formModalTitle').innerText = 'แก้ไขผลงาน';
             document.getElementById('formEditId').value = item.id;
             document.getElementById('formYear').value = item.evaluation_year || '';
             document.getElementById('formAcademicPos').value = item.academic_position || '';
             document.getElementById('formAuthorName').value = item.author_name || '';
             document.getElementById('formAuthorEmail').value = item.author_email || '';
-            document.getElementById('formWorkType').value = item.work_type || '';
+            document.getElementById('formWorkType').value = item.work_type || 'ตำราเรียน';
             document.getElementById('formBookCode').value = item.book_code || '';
             document.getElementById('formDepartment').value = item.department || '';
             document.getElementById('formTitle').value = item.title || '';
@@ -2077,7 +2124,6 @@
             document.getElementById('formFileCover').value = item.file_cover_url || '';
             document.getElementById('formFileEvalReport').value = item.file_eval_report_url || '';
 
-            document.getElementById('formModalTitle').innerText = 'แก้ไขข้อมูลผลงาน';
             openModal('editModal');
         }
 
@@ -2087,21 +2133,21 @@
 
             const payload = {
                 evaluation_year: parseInt(document.getElementById('formYear').value) || null,
-                academic_position: document.getElementById('formAcademicPos').value,
-                author_name: document.getElementById('formAuthorName').value,
-                author_email: document.getElementById('formAuthorEmail').value,
+                academic_position: document.getElementById('formAcademicPos').value.trim(),
+                author_name: document.getElementById('formAuthorName').value.trim(),
+                author_email: document.getElementById('formAuthorEmail').value.trim().toLowerCase(),
                 work_type: document.getElementById('formWorkType').value,
-                book_code: document.getElementById('formBookCode').value,
-                department: document.getElementById('formDepartment').value,
-                title: document.getElementById('formTitle').value,
+                book_code: document.getElementById('formBookCode').value.trim(),
+                department: document.getElementById('formDepartment').value.trim(),
+                title: document.getElementById('formTitle').value.trim(),
                 evaluation_status: document.getElementById('formEvalStatus').value,
                 publication_status: document.getElementById('formPubStatus').value,
-                isbn: document.getElementById('formIsbn').value || null,
-                vps_no: document.getElementById('formVpsNo').value || null,
-                note: document.getElementById('formNote').value || null,
-                file_original_url: document.getElementById('formFileOriginal').value || null,
-                file_cover_url: document.getElementById('formFileCover').value || null,
-                file_eval_report_url: document.getElementById('formFileEvalReport').value || null
+                isbn: document.getElementById('formIsbn').value.trim() || null,
+                vps_no: document.getElementById('formVpsNo').value.trim() || null,
+                note: document.getElementById('formNote').value.trim() || null,
+                file_original_url: document.getElementById('formFileOriginal').value.trim() || null,
+                file_cover_url: document.getElementById('formFileCover').value.trim() || null,
+                file_eval_report_url: document.getElementById('formFileEvalReport').value.trim() || null
             };
 
             try {
@@ -2110,23 +2156,21 @@
                         .from('evaluation')
                         .update(payload)
                         .eq('id', editId);
-
                     if (error) throw error;
                     showToast('แก้ไขข้อมูลเรียบร้อยแล้ว');
                 } else {
                     const { error } = await supabaseClient
                         .from('evaluation')
                         .insert([payload]);
-
                     if (error) throw error;
                     showToast('เพิ่มข้อมูลใหม่เรียบร้อยแล้ว');
                 }
 
                 closeModal('editModal');
-                fetchEvaluations();
+                await fetchEvaluations();
             } catch (err) {
                 console.error('Save error:', err);
-                showToast('ไม่สามารถบันทึกข้อมูลได้: ' + err.message, 'error');
+                showToast('บันทึกข้อมูลไม่สำเร็จ: ' + err.message, 'error');
             }
         }
 
@@ -2147,9 +2191,9 @@
 
                 if (error) throw error;
 
-                showToast('ลบข้อมูลเรียบร้อยแล้ว');
                 closeModal('deleteModal');
-                fetchEvaluations();
+                showToast('ลบข้อมูลเรียบร้อยแล้ว');
+                await fetchEvaluations();
             } catch (err) {
                 console.error('Delete error:', err);
                 showToast('ไม่สามารถลบข้อมูลได้: ' + err.message, 'error');
@@ -2158,39 +2202,36 @@
 
         function copyIsbnText() {
             const isbn = document.getElementById('popupIsbn')?.innerText;
-            if (!isbn || isbn === '-') return;
-            navigator.clipboard.writeText(isbn);
-            showToast('คัดลอก ISBN เรียบร้อยแล้ว');
+            if (isbn && isbn !== '-') {
+                navigator.clipboard.writeText(isbn);
+                showToast('คัดลอก ISBN เรียบร้อยแล้ว');
+            }
         }
 
         function exportToCSV() {
-            if (evaluationsData.length === 0) {
-                showToast('ไม่มีข้อมูลสำหรับส่งออก', 'error');
+            if (!evaluationsData || evaluationsData.length === 0) {
+                showToast('ไม่มีข้อมูลสำหรับส่งออก CSV', 'error');
                 return;
             }
 
-            const headers = ["รหัสหนังสือ", "ปีที่ประเมิน", "ตำแหน่งวิชาการ", "ผู้เขียน", "อีเมล", "ประเภท", "ภาควิชา", "ชื่อเรื่อง", "สถานะประเมิน", "สถานะจัดพิมพ์", "ISBN", "เลข วศ.สจล."];
-            const rows = evaluationsData.map(i => [
-                `"${i.book_code || ''}"`,
-                `"${i.evaluation_year || ''}"`,
-                `"${i.academic_position || ''}"`,
-                `"${i.author_name || ''}"`,
-                `"${i.author_email || ''}"`,
-                `"${i.work_type || ''}"`,
-                `"${i.department || ''}"`,
-                `"${i.title || ''}"`,
-                `"${i.evaluation_status || ''}"`,
-                `"${i.publication_status || ''}"`,
-                `"${i.isbn || ''}"`,
-                `"${i.vps_no || ''}"`
-            ]);
+            const headers = ['id', 'book_code', 'evaluation_year', 'academic_position', 'author_name', 'author_email', 'department', 'title', 'evaluation_status', 'publication_status', 'isbn', 'vps_no', 'file_original_url', 'file_cover_url', 'file_eval_report_url'];
+            const csvRows = [headers.join(',')];
 
-            const csvContent = "\uFEFF" + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            evaluationsData.forEach(row => {
+                const values = headers.map(header => {
+                    const val = row[header] ?? '';
+                    const escaped = ('' + val).replace(/"/g, '""');
+                    return `"${escaped}"`;
+                });
+                csvRows.push(values.join(','));
+            });
+
+            const csvString = '\uFEFF' + csvRows.join('\n');
+            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.setAttribute('href', url);
-            link.setAttribute('download', `evaluation_export_${new Date().toISOString().slice(0,10)}.csv`);
+            link.setAttribute('download', `evaluations_export_${new Date().toISOString().slice(0,10)}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
