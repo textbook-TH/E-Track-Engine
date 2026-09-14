@@ -838,7 +838,7 @@
         let filteredData = [];
         let staffFilteredData = [];
         let teacherFilteredData = [];
-        let adminList = []; 
+        let adminList = []; // ข้อมูลรายชื่อ Admin จากตาราง admin ใน Supabase
 
         let currentUser = null; 
         let currentRoleSelection = 'teacher';
@@ -1836,9 +1836,14 @@
             openModal('detailModal');
         }
 
-        /**
-         * ฟังก์ชันช่วยสร้างปุ่มดาวน์โหลดไฟล์สำหรับหน้าเจ้าหน้าที่
-         */
+        function copyIsbnText() {
+            const isbnText = document.getElementById('popupIsbn')?.innerText;
+            if (isbnText && isbnText !== '-') {
+                navigator.clipboard.writeText(isbnText);
+                showToast('คัดลอก ISBN เรียบร้อยแล้ว');
+            }
+        }
+
         function renderStaffFileButtons(item) {
             const origUrl = item.file_original_url ? convertGoogleDriveLink(item.file_original_url) : null;
             const coverUrl = item.file_cover_url ? convertGoogleDriveLink(item.file_cover_url) : null;
@@ -1859,30 +1864,27 @@
             return `<div class="flex items-center space-x-1.5">${btnOriginal}${btnCover}${btnEval}</div>`;
         }
 
-        /**
-         * ฟังก์ชันช่วยสร้างปุ่มดาวน์โหลดไฟล์สำหรับหน้าอาจารย์
-         * ปรับแสดงเป็นไอคอน โดยไม่แสดงข้อความ "ต้นฉบับ", "ปก", "ผลประเมิน"
-         */
         function renderTeacherFileButtons(item) {
             const origUrl = item.file_original_url ? convertGoogleDriveLink(item.file_original_url) : null;
             const coverUrl = item.file_cover_url ? convertGoogleDriveLink(item.file_cover_url) : null;
             const evalUrl = item.file_eval_report_url ? convertGoogleDriveLink(item.file_eval_report_url) : null;
 
             const btnOriginal = origUrl 
-                ? `<a href="${origUrl}" target="_blank" rel="noopener noreferrer" title="ต้นฉบับ" class="w-8 h-8 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-600 flex items-center justify-center transition-colors shadow-sm"><i class="fa-solid fa-file-lines text-xs"></i></a>`
-                : `<span title="ยังไม่ได้อัปโหลดไฟล์" class="w-8 h-8 rounded-xl bg-slate-100 text-slate-300 flex items-center justify-center cursor-not-allowed"><i class="fa-solid fa-file-lines text-xs"></i></span>`;
+                ? `<a href="${origUrl}" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-medium flex items-center space-x-1 transition-colors"><i class="fa-solid fa-file-lines text-xs"></i><span>ต้นฉบับ</span></a>`
+                : `<span class="px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-300 text-xs font-medium flex items-center space-x-1 cursor-not-allowed" title="ยังไม่ได้อัปโหลดไฟล์"><i class="fa-solid fa-file-lines text-xs"></i><span>ต้นฉบับ</span></span>`;
 
             const btnCover = coverUrl 
-                ? `<a href="${coverUrl}" target="_blank" rel="noopener noreferrer" title="ปก" class="w-8 h-8 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-600 flex items-center justify-center transition-colors shadow-sm"><i class="fa-solid fa-image text-xs"></i></a>`
-                : `<span title="ยังไม่ได้อัปโหลดไฟล์" class="w-8 h-8 rounded-xl bg-slate-100 text-slate-300 flex items-center justify-center cursor-not-allowed"><i class="fa-solid fa-image text-xs"></i></span>`;
+                ? `<a href="${coverUrl}" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1.5 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 text-xs font-medium flex items-center space-x-1 transition-colors"><i class="fa-solid fa-image text-xs"></i><span>ปก</span></a>`
+                : `<span class="px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-300 text-xs font-medium flex items-center space-x-1 cursor-not-allowed" title="ยังไม่ได้อัปโหลดไฟล์"><i class="fa-solid fa-image text-xs"></i><span>ปก</span></span>`;
 
             const btnEval = evalUrl 
-                ? `<a href="${evalUrl}" target="_blank" rel="noopener noreferrer" title="ผลประเมิน" class="w-8 h-8 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-600 flex items-center justify-center transition-colors shadow-sm"><i class="fa-solid fa-file-circle-check text-xs"></i></a>`
-                : `<span title="ยังไม่ได้อัปโหลดไฟล์" class="w-8 h-8 rounded-xl bg-slate-100 text-slate-300 flex items-center justify-center cursor-not-allowed"><i class="fa-solid fa-file-circle-check text-xs"></i></span>`;
+                ? `<a href="${evalUrl}" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 text-xs font-medium flex items-center space-x-1 transition-colors"><i class="fa-solid fa-file-circle-check text-xs"></i><span>ผลประเมิน</span></a>`
+                : `<span class="px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-300 text-xs font-medium flex items-center space-x-1 cursor-not-allowed" title="ยังไม่ได้อัปโหลดไฟล์"><i class="fa-solid fa-file-circle-check text-xs"></i><span>ผลประเมิน</span></span>`;
 
             return `<div class="flex items-center space-x-1.5">${btnOriginal}${btnCover}${btnEval}</div>`;
         }
 
+        /* ================= STAFF VIEW RENDERERS ================= */
         function filterStaffData() {
             const search = (document.getElementById('staffSearchInput')?.value || '').toLowerCase();
             const year = document.getElementById('staffYearFilter')?.value || '';
@@ -1934,16 +1936,18 @@
 
                     return `
                     <tr class="hover:bg-slate-50/80 transition-colors">
-                        <td class="py-4 px-4 font-bold text-blue-600 font-mono text-xs align-top whitespace-nowrap">
+                        <td class="py-4 px-4 font-bold text-blue-600 font-mono text-xs align-top cursor-pointer hover:underline whitespace-nowrap" onclick="openDetailModal(${item.id})">
                             ${escapeHtml(item.book_code) || '-'}
                         </td>
-                        <td class="py-4 px-4 align-top whitespace-nowrap">
+                        <td class="py-4 px-4 align-top cursor-pointer whitespace-nowrap" onclick="openDetailModal(${item.id})">
                             ${getStatusBadge(item.evaluation_status)}
                         </td>
-                        <td class="py-4 px-4 align-top">
+                        <td class="py-4 px-4 align-top cursor-pointer group" onclick="openDetailModal(${item.id})">
                             <div class="space-y-2">
-                                <div class="font-bold text-slate-900 text-base leading-snug">
-                                    ${escapeHtml(item.title) || '-'}
+                                <div class="flex items-center space-x-2.5 flex-wrap gap-y-1">
+                                    <span class="font-bold text-slate-900 text-base leading-snug group-hover:text-blue-600 transition-colors">
+                                        ${escapeHtml(item.title) || '-'}
+                                    </span>
                                 </div>
 
                                 <div class="flex items-center flex-wrap gap-x-4 gap-y-1.5 text-slate-500">
@@ -1967,13 +1971,6 @@
                                             <span>ปีที่ประเมิน: ${escapeHtml(item.evaluation_year)}</span>
                                         </span>
                                     ` : ''}
-
-                                    ${item.isbn ? `
-                                        <span class="inline-flex items-center space-x-1 text-[11px] font-mono">
-                                            <i class="fa-solid fa-barcode text-slate-400 text-[10px]"></i>
-                                            <span>ISBN: ${escapeHtml(item.isbn)}</span>
-                                        </span>
-                                    ` : ''}
                                 </div>
                             </div>
                         </td>
@@ -1981,7 +1978,7 @@
                             ${renderStaffFileButtons(item)}
                         </td>
                         <td class="py-4 px-4 align-top text-center whitespace-nowrap">
-                            <div class="flex items-center justify-center space-x-2">
+                            <div class="flex items-center justify-center space-x-1.5">
                                 <button onclick="openEditModal(${item.id})" title="แก้ไข" class="w-8 h-8 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-600 flex items-center justify-center transition-colors">
                                     <i class="fa-solid fa-pen-to-square text-xs"></i>
                                 </button>
@@ -1999,61 +1996,55 @@
                     const authorFull = escapeHtml(`${item.academic_position || ''} ${item.author_name || ''}`.trim());
 
                     return `
-                    <div class="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200/80 flex flex-col items-center text-center space-y-3.5 transition-all">
-                        ${item.book_code ? `
-                            <span class="px-3 py-1 bg-blue-50 text-blue-600 border border-blue-200/60 rounded-full text-xs font-bold font-mono tracking-wide">
-                                ${escapeHtml(item.book_code)}
+                    <div class="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200/80 flex flex-col space-y-3.5 transition-all hover:shadow-md">
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                            <span class="px-3 py-1 bg-blue-50 text-blue-600 border border-blue-200/60 rounded-full text-xs font-bold font-mono">
+                                ${escapeHtml(item.book_code) || '-'}
                             </span>
-                        ` : ''}
-
-                        <h3 class="text-base font-bold text-slate-900 leading-snug px-2">
-                            ${escapeHtml(item.title) || '-'}
-                        </h3>
-
-                        ${authorFull ? `
-                            <div class="flex items-center justify-center space-x-1.5 text-xs text-slate-600 font-medium bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
-                                <i class="fa-solid fa-user-pen text-blue-500 text-xs"></i>
-                                <span>${authorFull}</span>
-                            </div>
-                        ` : ''}
-
-                        <div class="flex flex-wrap items-center justify-center gap-1.5 text-[11px] text-slate-500 font-normal w-full">
-                            ${item.department ? `
-                                <span class="inline-flex items-center space-x-1 bg-slate-100/80 px-2.5 py-1 rounded-lg text-slate-600">
-                                    <i class="fa-solid fa-landmark text-slate-400 text-[10px]"></i>
-                                    <span>${escapeHtml(item.department)}</span>
-                                </span>
-                            ` : ''}
-                            ${item.evaluation_year ? `
-                                <span class="inline-flex items-center space-x-1 bg-slate-100/80 px-2.5 py-1 rounded-lg text-slate-600">
-                                    <i class="fa-regular fa-calendar-days text-slate-400 text-[10px]"></i>
-                                    <span>ปีที่ประเมิน: ${escapeHtml(item.evaluation_year)}</span>
-                                </span>
-                            ` : ''}
-                            ${item.isbn ? `
-                                <span class="inline-flex items-center space-x-1 bg-slate-100/80 px-2.5 py-1 rounded-lg text-slate-600 font-mono">
-                                    <i class="fa-solid fa-barcode text-slate-400 text-[10px]"></i>
-                                    <span>ISBN: ${escapeHtml(item.isbn)}</span>
-                                </span>
-                            ` : ''}
+                            <div>${getStatusBadge(item.evaluation_status)}</div>
                         </div>
 
-                        <div class="pt-1 w-full flex justify-center">
-                            ${getMobileStatusBadge(item.evaluation_status)}
+                        <div class="cursor-pointer" onclick="openDetailModal(${item.id})">
+                            <h3 class="text-base font-bold text-slate-900 leading-snug hover:text-blue-600 transition-colors">
+                                ${escapeHtml(item.title) || '-'}
+                            </h3>
+
+                            <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500 font-medium mt-2">
+                                ${authorFull ? `
+                                    <span class="inline-flex items-center space-x-1 text-slate-600">
+                                        <i class="fa-solid fa-user-pen text-blue-500 text-xs"></i>
+                                        <span>${authorFull}</span>
+                                    </span>
+                                ` : ''}
+                                ${item.department ? `
+                                    <span class="inline-flex items-center space-x-1 text-[11px] bg-slate-100 px-2 py-0.5 rounded-md text-slate-600">
+                                        <i class="fa-solid fa-landmark text-slate-400 text-[10px]"></i>
+                                        <span>${escapeHtml(item.department)}</span>
+                                    </span>
+                                ` : ''}
+                                ${item.evaluation_year ? `
+                                    <span class="inline-flex items-center space-x-1 text-[11px] bg-slate-100 px-2 py-0.5 rounded-md text-slate-600">
+                                        <i class="fa-regular fa-calendar-days text-slate-400 text-[10px]"></i>
+                                        <span>ปีที่ประเมิน: ${escapeHtml(item.evaluation_year)}</span>
+                                    </span>
+                                ` : ''}
+                            </div>
                         </div>
 
-                        <div class="pt-2 border-t border-slate-100 w-full flex items-center justify-between">
-                            <div>${renderStaffFileButtons(item)}</div>
-                            <div class="flex items-center space-x-2">
-                                <button onclick="openEditModal(${item.id})" class="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-xl text-xs font-semibold flex items-center space-x-1">
-                                    <i class="fa-solid fa-pen-to-square"></i>
-                                    <span>แก้ไข</span>
-                                </button>
-                                <button onclick="openDeleteModal(${item.id})" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-semibold flex items-center space-x-1">
-                                    <i class="fa-solid fa-trash-can"></i>
-                                    <span>ลบ</span>
-                                </button>
-                            </div>
+                        <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+                            <div class="text-xs text-slate-400 font-medium">เอกสาร:</div>
+                            ${renderStaffFileButtons(item)}
+                        </div>
+
+                        <div class="flex items-center space-x-2 pt-2">
+                            <button onclick="openEditModal(${item.id})" class="flex-1 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 font-semibold rounded-xl text-xs flex items-center justify-center space-x-1.5 transition-colors">
+                                <i class="fa-solid fa-pen-to-square text-xs"></i>
+                                <span>แก้ไขข้อมูล</span>
+                            </button>
+                            <button onclick="openDeleteModal(${item.id})" class="flex-1 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold rounded-xl text-xs flex items-center justify-center space-x-1.5 transition-colors">
+                                <i class="fa-solid fa-trash-can text-xs"></i>
+                                <span>ลบข้อมูล</span>
+                            </button>
                         </div>
                     </div>
                     `;
@@ -2063,21 +2054,24 @@
             renderPaginationControls('staffPagination', staffCurrentPage, staffFilteredData.length, 'changeStaffPage');
         }
 
+        /* ================= TEACHER VIEW RENDERERS ================= */
         function filterTeacherData() {
             if (!currentUser || !currentUser.email) {
                 teacherFilteredData = [];
-            } else {
-                const email = currentUser.email.toLowerCase().trim();
-                const teacherEmailElem = document.getElementById('teacherLoggedInEmail');
-                if (teacherEmailElem) teacherEmailElem.innerText = currentUser.email;
-
-                let rawFiltered = evaluationsData.filter(item => {
-                    const authorEmail = (item.author_email || '').toLowerCase().trim();
-                    return authorEmail === email;
-                });
-
-                teacherFilteredData = sortByBookCodeDesc(rawFiltered);
+                renderTeacherTable();
+                return;
             }
+
+            const userEmail = currentUser.email.toLowerCase().trim();
+            const elemEmail = document.getElementById('teacherLoggedInEmail');
+            if (elemEmail) elemEmail.innerText = currentUser.email;
+
+            let rawFiltered = evaluationsData.filter(item => {
+                const authorEmail = (item.author_email || '').toLowerCase().trim();
+                return authorEmail === userEmail;
+            });
+
+            teacherFilteredData = sortByBookCodeDesc(rawFiltered);
             teacherCurrentPage = 1;
             renderTeacherTable();
         }
@@ -2090,9 +2084,9 @@
             if (tableCount) tableCount.innerText = teacherFilteredData.length;
 
             if (teacherFilteredData.length === 0) {
-                if (tbody) tbody.innerHTML = `<tr><td colspan="4" class="text-center py-12 text-slate-400 font-light">ไม่พบรายการผลงานที่ตรงกับอีเมลของคุณ (${escapeHtml(currentUser?.email || '-')})</td></tr>`;
+                if (tbody) tbody.innerHTML = `<tr><td colspan="4" class="text-center py-12 text-slate-400 font-light">ไม่พบผลงานของคุณในระบบ</td></tr>`;
                 if (mobileContainer) {
-                    mobileContainer.innerHTML = `<div class="text-center py-12 text-slate-400 font-light bg-white rounded-2xl border border-slate-100">ไม่พบรายการผลงานที่ตรงกับอีเมลของคุณ (${escapeHtml(currentUser?.email || '-')})</div>`;
+                    mobileContainer.innerHTML = `<div class="text-center py-12 text-slate-400 font-light bg-white rounded-2xl border border-slate-100">ไม่พบผลงานของคุณในระบบ</div>`;
                 }
                 renderPaginationControls('teacherPagination', 1, 0, 'changeTeacherPage');
                 return;
@@ -2107,16 +2101,18 @@
 
                     return `
                     <tr class="hover:bg-slate-50/80 transition-colors">
-                        <td class="py-4 px-4 font-bold text-blue-600 font-mono text-xs align-top whitespace-nowrap">
+                        <td class="py-4 px-4 font-bold text-blue-600 font-mono text-xs align-top cursor-pointer hover:underline whitespace-nowrap" onclick="openDetailModal(${item.id})">
                             ${escapeHtml(item.book_code) || '-'}
                         </td>
-                        <td class="py-4 px-4 align-top whitespace-nowrap">
+                        <td class="py-4 px-4 align-top cursor-pointer whitespace-nowrap" onclick="openDetailModal(${item.id})">
                             ${getStatusBadge(item.evaluation_status)}
                         </td>
-                        <td class="py-4 px-4 align-top">
+                        <td class="py-4 px-4 align-top cursor-pointer group" onclick="openDetailModal(${item.id})">
                             <div class="space-y-2">
-                                <div class="font-bold text-slate-900 text-base leading-snug">
-                                    ${escapeHtml(item.title) || '-'}
+                                <div class="flex items-center space-x-2.5 flex-wrap gap-y-1">
+                                    <span class="font-bold text-slate-900 text-base leading-snug group-hover:text-blue-600 transition-colors">
+                                        ${escapeHtml(item.title) || '-'}
+                                    </span>
                                 </div>
 
                                 <div class="flex items-center flex-wrap gap-x-4 gap-y-1.5 text-slate-500">
@@ -2140,13 +2136,6 @@
                                             <span>ปีที่ประเมิน: ${escapeHtml(item.evaluation_year)}</span>
                                         </span>
                                     ` : ''}
-
-                                    ${item.isbn ? `
-                                        <span class="inline-flex items-center space-x-1 text-[11px] font-mono">
-                                            <i class="fa-solid fa-barcode text-slate-400 text-[10px]"></i>
-                                            <span>ISBN: ${escapeHtml(item.isbn)}</span>
-                                        </span>
-                                    ` : ''}
                                 </div>
                             </div>
                         </td>
@@ -2162,52 +2151,44 @@
                     const authorFull = escapeHtml(`${item.academic_position || ''} ${item.author_name || ''}`.trim());
 
                     return `
-                    <div class="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200/80 flex flex-col items-center text-center space-y-3.5 transition-all">
-                        ${item.book_code ? `
-                            <span class="px-3 py-1 bg-blue-50 text-blue-600 border border-blue-200/60 rounded-full text-xs font-bold font-mono tracking-wide">
-                                ${escapeHtml(item.book_code)}
+                    <div class="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200/80 flex flex-col space-y-3.5 transition-all hover:shadow-md">
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                            <span class="px-3 py-1 bg-blue-50 text-blue-600 border border-blue-200/60 rounded-full text-xs font-bold font-mono">
+                                ${escapeHtml(item.book_code) || '-'}
                             </span>
-                        ` : ''}
+                            <div>${getStatusBadge(item.evaluation_status)}</div>
+                        </div>
 
-                        <h3 class="text-base font-bold text-slate-900 leading-snug px-2">
-                            ${escapeHtml(item.title) || '-'}
-                        </h3>
+                        <div class="cursor-pointer" onclick="openDetailModal(${item.id})">
+                            <h3 class="text-base font-bold text-slate-900 leading-snug hover:text-blue-600 transition-colors">
+                                ${escapeHtml(item.title) || '-'}
+                            </h3>
 
-                        ${authorFull ? `
-                            <div class="flex items-center justify-center space-x-1.5 text-xs text-slate-600 font-medium bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
-                                <i class="fa-solid fa-user-pen text-blue-500 text-xs"></i>
-                                <span>${authorFull}</span>
+                            <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500 font-medium mt-2">
+                                ${authorFull ? `
+                                    <span class="inline-flex items-center space-x-1 text-slate-600">
+                                        <i class="fa-solid fa-user-pen text-blue-500 text-xs"></i>
+                                        <span>${authorFull}</span>
+                                    </span>
+                                ` : ''}
+                                ${item.department ? `
+                                    <span class="inline-flex items-center space-x-1 text-[11px] bg-slate-100 px-2 py-0.5 rounded-md text-slate-600">
+                                        <i class="fa-solid fa-landmark text-slate-400 text-[10px]"></i>
+                                        <span>${escapeHtml(item.department)}</span>
+                                    </span>
+                                ` : ''}
+                                ${item.evaluation_year ? `
+                                    <span class="inline-flex items-center space-x-1 text-[11px] bg-slate-100 px-2 py-0.5 rounded-md text-slate-600">
+                                        <i class="fa-regular fa-calendar-days text-slate-400 text-[10px]"></i>
+                                        <span>ปีที่ประเมิน: ${escapeHtml(item.evaluation_year)}</span>
+                                    </span>
+                                ` : ''}
                             </div>
-                        ` : ''}
-
-                        <div class="flex flex-wrap items-center justify-center gap-1.5 text-[11px] text-slate-500 font-normal w-full">
-                            ${item.department ? `
-                                <span class="inline-flex items-center space-x-1 bg-slate-100/80 px-2.5 py-1 rounded-lg text-slate-600">
-                                    <i class="fa-solid fa-landmark text-slate-400 text-[10px]"></i>
-                                    <span>${escapeHtml(item.department)}</span>
-                                </span>
-                            ` : ''}
-                            ${item.evaluation_year ? `
-                                <span class="inline-flex items-center space-x-1 bg-slate-100/80 px-2.5 py-1 rounded-lg text-slate-600">
-                                    <i class="fa-regular fa-calendar-days text-slate-400 text-[10px]"></i>
-                                    <span>ปีที่ประเมิน: ${escapeHtml(item.evaluation_year)}</span>
-                                </span>
-                            ` : ''}
-                            ${item.isbn ? `
-                                <span class="inline-flex items-center space-x-1 bg-slate-100/80 px-2.5 py-1 rounded-lg text-slate-600 font-mono">
-                                    <i class="fa-solid fa-barcode text-slate-400 text-[10px]"></i>
-                                    <span>ISBN: ${escapeHtml(item.isbn)}</span>
-                                </span>
-                            ` : ''}
                         </div>
 
-                        <div class="pt-1 w-full flex justify-center">
-                            ${getMobileStatusBadge(item.evaluation_status)}
-                        </div>
-
-                        <div class="pt-3 border-t border-slate-100 w-full flex items-center justify-between">
-                            <span class="text-xs font-semibold text-slate-600">ดาวน์โหลดเอกสาร:</span>
-                            <div>${renderTeacherFileButtons(item)}</div>
+                        <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+                            <div class="text-xs text-slate-400 font-medium">ดาวน์โหลดเอกสาร:</div>
+                            ${renderTeacherFileButtons(item)}
                         </div>
                     </div>
                     `;
@@ -2217,6 +2198,7 @@
             renderPaginationControls('teacherPagination', teacherCurrentPage, teacherFilteredData.length, 'changeTeacherPage');
         }
 
+        /* ================= CRUD & EXPORT HANDLERS ================= */
         function openAddModal() {
             document.getElementById('formModalTitle').innerText = 'เพิ่มผลงานใหม่';
             document.getElementById('formEditId').value = '';
@@ -2274,9 +2256,10 @@
 
         async function handleFormSubmit(e) {
             e.preventDefault();
+
             const editId = document.getElementById('formEditId').value;
 
-            const record = {
+            const payload = {
                 evaluation_year: parseInt(document.getElementById('formYear').value) || null,
                 academic_position: document.getElementById('formAcademicPos').value.trim(),
                 author_name: document.getElementById('formAuthorName').value.trim(),
@@ -2301,14 +2284,16 @@
                 if (editId) {
                     const { error } = await supabaseClient
                         .from('evaluation')
-                        .update(record)
+                        .update(payload)
                         .eq('id', editId);
+
                     if (error) throw error;
-                    showToast('แก้ไขข้อมูลสำเร็จแล้ว');
+                    showToast('อัปเดตข้อมูลผลงานเรียบร้อยแล้ว');
                 } else {
                     const { error } = await supabaseClient
                         .from('evaluation')
-                        .insert([record]);
+                        .insert([payload]);
+
                     if (error) throw error;
                     showToast('เพิ่มผลงานใหม่เรียบร้อยแล้ว');
                 }
@@ -2316,8 +2301,8 @@
                 closeModal('editModal');
                 await fetchEvaluations();
             } catch (err) {
-                console.error('Save error:', err);
-                showToast('เกิดข้อผิดพลาดในการบันทึก: ' + err.message, 'error');
+                console.error('Submit Error:', err);
+                showToast('เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + err.message, 'error');
             }
         }
 
@@ -2338,21 +2323,12 @@
 
                 if (error) throw error;
 
-                showToast('ลบข้อมูลเรียบร้อยแล้ว');
+                showToast('ลบข้อมูลผลงานเรียบร้อยแล้ว');
                 closeModal('deleteModal');
                 await fetchEvaluations();
             } catch (err) {
                 console.error('Delete error:', err);
-                showToast('เกิดข้อผิดพลาดในการลบ: ' + err.message, 'error');
-            }
-        }
-
-        function copyIsbnText() {
-            const isbnText = document.getElementById('popupIsbn')?.innerText;
-            if (isbnText && isbnText !== '-') {
-                navigator.clipboard.writeText(isbnText).then(() => {
-                    showToast('คัดลอก ISBN เรียบร้อยแล้ว');
-                });
+                showToast('เกิดข้อผิดพลาดในการลบข้อมูล: ' + err.message, 'error');
             }
         }
 
@@ -2362,26 +2338,27 @@
                 return;
             }
 
-            const headers = ['id', 'book_code', 'title', 'academic_position', 'author_name', 'author_email', 'department', 'evaluation_year', 'evaluation_status', 'publication_status', 'isbn', 'vps_no', 'note', 'file_original_url', 'file_cover_url', 'file_eval_report_url'];
+            const headers = ['id', 'book_code', 'evaluation_year', 'academic_position', 'author_name', 'author_email', 'work_type', 'department', 'title', 'evaluation_status', 'publication_status', 'isbn', 'vps_no', 'note', 'file_original_url', 'file_cover_url', 'file_eval_report_url'];
 
-            const rows = evaluationsData.map(item => {
-                return headers.map(header => {
-                    let val = item[header] ?? '';
-                    val = String(val).replace(/"/g, '""');
+            let csvContent = '\uFEFF' + headers.join(',') + '\n';
+
+            evaluationsData.forEach(item => {
+                const row = headers.map(header => {
+                    let val = item[header] === null || item[header] === undefined ? '' : String(item[header]);
+                    val = val.replace(/"/g, '""');
                     return `"${val}"`;
-                }).join(',');
+                });
+                csvContent += row.join(',') + '\n';
             });
 
-            const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\n');
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.setAttribute('href', url);
-            link.setAttribute('download', `evaluations_${new Date().toISOString().slice(0, 10)}.csv`);
+            link.setAttribute('download', `evaluations_export_${new Date().toISOString().slice(0,10)}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            showToast('ส่งออก CSV เรียบร้อยแล้ว');
         }
     </script>
 </body>
