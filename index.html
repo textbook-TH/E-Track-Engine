@@ -812,6 +812,27 @@
         // Initialize Supabase Client
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        // --- Helper: Security HTML Escaping to Prevent XSS ---
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // --- Helper: Validate Safe URL Protocol ---
+        function sanitizeUrl(url) {
+            if (!url || typeof url !== 'string') return '#';
+            const trimmed = url.trim();
+            if (/^(https?:\/\/|\/)/i.test(trimmed)) {
+                return trimmed;
+            }
+            return '#';
+        }
+
         // --- 2. Application State ---
         let evaluationsData = [];
         let filteredData = [];
@@ -1033,7 +1054,7 @@
             if (!url || typeof url !== 'string') return null;
             const trimmed = url.trim();
             if (!trimmed) return null;
-            if (!trimmed.includes('drive.google.com')) return trimmed;
+            if (!trimmed.includes('drive.google.com')) return sanitizeUrl(trimmed);
 
             let fileId = null;
             const matchPath = trimmed.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
@@ -1049,7 +1070,7 @@
             if (fileId) {
                 return `https://drive.google.com/uc?export=download&id=${fileId}`;
             }
-            return trimmed;
+            return sanitizeUrl(trimmed);
         }
 
         function showToast(message, type = 'success') {
@@ -1060,7 +1081,7 @@
             const icon = type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation';
 
             toast.className = `px-4 py-3 rounded-xl border shadow-2xl flex items-center space-x-2 text-xs font-medium pointer-events-auto transition-all transform duration-300 ${bgClass}`;
-            toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${message}</span>`;
+            toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${escapeHtml(message)}</span>`;
             
             container.appendChild(toast);
             setTimeout(() => {
@@ -1538,7 +1559,7 @@
             if (!select) return;
             const currentVal = select.value;
             select.innerHTML = `<option value="">${defaultText}</option>` +
-                items.map(item => `<option value="${item}">${item}</option>`).join('');
+                items.map(item => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`).join('');
             select.value = currentVal;
         }
 
@@ -1587,7 +1608,7 @@
             if (status === 'ไม่ผ่านการประเมิน') {
                 return `<span class="px-2.5 py-1 bg-rose-100 text-rose-700 rounded-full text-xs font-semibold inline-flex items-center space-x-1 whitespace-nowrap"><i class="fa-solid fa-circle-xmark text-[10px]"></i><span>ไม่ผ่านการประเมิน</span></span>`;
             }
-            return `<span class="px-2.5 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold inline-flex items-center space-x-1 whitespace-nowrap"><i class="fa-solid fa-hourglass-half text-[10px]"></i><span class="whitespace-nowrap">${status}</span></span>`;
+            return `<span class="px-2.5 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold inline-flex items-center space-x-1 whitespace-nowrap"><i class="fa-solid fa-hourglass-half text-[10px]"></i><span class="whitespace-nowrap">${escapeHtml(status)}</span></span>`;
         }
 
         function getMobileStatusBadge(status) {
@@ -1596,7 +1617,7 @@
 
         function getPublicationStatusBadge(status) {
             if (!status) return `<p class="text-sm sm:text-base font-bold text-slate-800">-</p>`;
-            return `<p class="text-sm sm:text-base font-bold text-slate-800">${status}</p>`;
+            return `<p class="text-sm sm:text-base font-bold text-slate-800">${escapeHtml(status)}</p>`;
         }
 
         function renderHomeTable() {
@@ -1623,12 +1644,12 @@
 
             if (tbody) {
                 tbody.innerHTML = pageData.map(item => {
-                    const authorFull = `${item.academic_position || ''} ${item.author_name || ''}`.trim();
+                    const authorFull = escapeHtml(`${item.academic_position || ''} ${item.author_name || ''}`.trim());
 
                     return `
                     <tr class="hover:bg-slate-50/80 transition-colors">
                         <td class="py-4 px-4 font-bold text-blue-600 font-mono text-xs align-top cursor-pointer hover:underline whitespace-nowrap" onclick="openDetailModal(${item.id})">
-                            ${item.book_code || '-'}
+                            ${escapeHtml(item.book_code) || '-'}
                         </td>
                         <td class="py-4 px-4 align-top cursor-pointer whitespace-nowrap" onclick="openDetailModal(${item.id})">
                             ${getStatusBadge(item.evaluation_status)}
@@ -1637,7 +1658,7 @@
                             <div class="space-y-2">
                                 <div class="flex items-center space-x-2.5 flex-wrap gap-y-1">
                                     <span class="font-bold text-slate-900 text-base leading-snug group-hover:text-blue-600 transition-colors">
-                                        ${item.title || '-'}
+                                        ${escapeHtml(item.title) || '-'}
                                     </span>
                                 </div>
 
@@ -1652,21 +1673,21 @@
                                     ${item.department ? `
                                         <span class="inline-flex items-center space-x-1 text-[11px]">
                                             <i class="fa-solid fa-landmark text-slate-400 text-[10px]"></i>
-                                            <span>${item.department}</span>
+                                            <span>${escapeHtml(item.department)}</span>
                                         </span>
                                     ` : ''}
 
                                     ${item.evaluation_year ? `
                                         <span class="inline-flex items-center space-x-1 text-[11px]">
                                             <i class="fa-regular fa-calendar-days text-slate-400 text-[10px]"></i>
-                                            <span>ปีที่ประเมิน: ${item.evaluation_year}</span>
+                                            <span>ปีที่ประเมิน: ${escapeHtml(item.evaluation_year)}</span>
                                         </span>
                                     ` : ''}
 
                                     ${item.isbn ? `
                                         <span class="inline-flex items-center space-x-1 text-[11px] font-mono">
                                             <i class="fa-solid fa-barcode text-slate-400 text-[10px]"></i>
-                                            <span>ISBN: ${item.isbn}</span>
+                                            <span>ISBN: ${escapeHtml(item.isbn)}</span>
                                         </span>
                                     ` : ''}
                                 </div>
@@ -1678,7 +1699,7 @@
 
             if (mobileContainer) {
                 mobileContainer.innerHTML = pageData.map(item => {
-                    const authorFull = `${item.academic_position || ''} ${item.author_name || ''}`.trim();
+                    const authorFull = escapeHtml(`${item.academic_position || ''} ${item.author_name || ''}`.trim());
 
                     return `
                     <div onclick="openDetailModal(${item.id})" class="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200/80 flex flex-col items-center text-center space-y-3.5 transition-all cursor-pointer hover:shadow-md active:scale-[0.99]">
@@ -1689,12 +1710,12 @@
 
                         ${item.book_code ? `
                             <span class="px-3 py-1 bg-blue-50 text-blue-600 border border-blue-200/60 rounded-full text-xs font-bold font-mono tracking-wide">
-                                ${item.book_code}
+                                ${escapeHtml(item.book_code)}
                             </span>
                         ` : ''}
 
                         <h3 class="text-base font-bold text-slate-900 leading-snug px-2">
-                            ${item.title || '-'}
+                            ${escapeHtml(item.title) || '-'}
                         </h3>
 
                         ${authorFull ? `
@@ -1708,19 +1729,19 @@
                             ${item.department ? `
                                 <span class="inline-flex items-center space-x-1 bg-slate-100/80 px-2.5 py-1 rounded-lg text-slate-600">
                                     <i class="fa-solid fa-landmark text-slate-400 text-[10px]"></i>
-                                    <span>${item.department}</span>
+                                    <span>${escapeHtml(item.department)}</span>
                                 </span>
                             ` : ''}
                             ${item.evaluation_year ? `
                                 <span class="inline-flex items-center space-x-1 bg-slate-100/80 px-2.5 py-1 rounded-lg text-slate-600">
                                     <i class="fa-regular fa-calendar-days text-slate-400 text-[10px]"></i>
-                                    <span>ปีที่ประเมิน: ${item.evaluation_year}</span>
+                                    <span>ปีที่ประเมิน: ${escapeHtml(item.evaluation_year)}</span>
                                 </span>
                             ` : ''}
                             ${item.isbn ? `
                                 <span class="inline-flex items-center space-x-1 bg-slate-100/80 px-2.5 py-1 rounded-lg text-slate-600 font-mono">
                                     <i class="fa-solid fa-barcode text-slate-400 text-[10px]"></i>
-                                    <span>ISBN: ${item.isbn}</span>
+                                    <span>ISBN: ${escapeHtml(item.isbn)}</span>
                                 </span>
                             ` : ''}
                         </div>
@@ -1860,9 +1881,10 @@
                 ? `<a href="${evalUrl}" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 text-xs font-medium flex items-center space-x-1 transition-colors"><i class="fa-solid fa-file-circle-check text-xs"></i><span>ผลประเมิน</span></a>`
                 : `<span class="px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-300 text-xs font-medium flex items-center space-x-1 cursor-not-allowed" title="ยังไม่ได้อัปโหลดไฟล์"><i class="fa-solid fa-file-circle-check text-xs"></i><span>ผลประเมิน</span></span>`;
 
-            return `<div class="flex items-center flex-wrap gap-1.5">${btnOriginal}${btnCover}${btnEval}</div>`;
+            return `<div class="flex items-center space-x-2 flex-wrap gap-y-1">${btnOriginal}${btnCover}${btnEval}</div>`;
         }
 
+        // ================= STAFF FUNCTIONS =================
         function filterStaffData() {
             const search = (document.getElementById('staffSearchInput')?.value || '').toLowerCase();
             const year = document.getElementById('staffYearFilter')?.value || '';
@@ -1873,9 +1895,9 @@
                 const matchSearch = !search || 
                     (item.title && item.title.toLowerCase().includes(search)) ||
                     (item.author_name && item.author_name.toLowerCase().includes(search)) ||
+                    (item.author_email && item.author_email.toLowerCase().includes(search)) ||
                     (item.book_code && item.book_code.toLowerCase().includes(search)) ||
-                    (item.isbn && item.isbn.toLowerCase().includes(search)) ||
-                    (item.vps_no && item.vps_no.toLowerCase().includes(search));
+                    (item.isbn && item.isbn.toLowerCase().includes(search));
 
                 const matchYear = !year || String(item.evaluation_year) === String(year);
                 const matchDept = !dept || item.department === dept;
@@ -1910,36 +1932,39 @@
 
             if (tbody) {
                 tbody.innerHTML = pageData.map(item => {
-                    const authorFull = `${item.academic_position || ''} ${item.author_name || ''}`.trim();
+                    const authorFull = escapeHtml(`${item.academic_position || ''} ${item.author_name || ''}`.trim());
 
                     return `
                     <tr class="hover:bg-slate-50/80 transition-colors">
-                        <td class="py-4 px-4 font-bold text-blue-600 font-mono text-xs align-top whitespace-nowrap">
-                            ${item.book_code || '-'}
+                        <td class="py-4 px-4 font-bold text-blue-600 font-mono text-xs align-top whitespace-nowrap cursor-pointer hover:underline" onclick="openDetailModal(${item.id})">
+                            ${escapeHtml(item.book_code) || '-'}
                         </td>
                         <td class="py-4 px-4 align-top whitespace-nowrap">
                             ${getStatusBadge(item.evaluation_status)}
                         </td>
                         <td class="py-4 px-4 align-top">
                             <div class="space-y-1.5">
-                                <h4 class="font-bold text-slate-900 text-sm leading-snug">${item.title || '-'}</h4>
-                                <div class="flex items-center flex-wrap gap-x-3 gap-y-1 text-slate-500 text-xs">
-                                    ${authorFull ? `<span><i class="fa-solid fa-user-pen mr-1 text-slate-400"></i>${authorFull}</span>` : ''}
-                                    ${item.department ? `<span><i class="fa-solid fa-landmark mr-1 text-slate-400"></i>${item.department}</span>` : ''}
-                                    ${item.evaluation_year ? `<span><i class="fa-regular fa-calendar-days mr-1 text-slate-400"></i>ปี ${item.evaluation_year}</span>` : ''}
+                                <h4 class="font-bold text-slate-900 text-sm leading-snug cursor-pointer hover:text-blue-600" onclick="openDetailModal(${item.id})">
+                                    ${escapeHtml(item.title) || '-'}
+                                </h4>
+                                <div class="flex items-center flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
+                                    <span class="font-medium text-slate-700"><i class="fa-solid fa-user-pen text-slate-400 mr-1"></i>${authorFull || '-'}</span>
+                                    <span>(${escapeHtml(item.author_email) || 'ไม่มีอีเมล'})</span>
+                                    <span>| ${escapeHtml(item.department) || '-'}</span>
+                                    <span>| ปี ${escapeHtml(item.evaluation_year) || '-'}</span>
                                 </div>
                             </div>
                         </td>
-                        <td class="py-4 px-4 align-top whitespace-nowrap">
+                        <td class="py-4 px-4 align-top">
                             ${renderStaffFileButtons(item)}
                         </td>
                         <td class="py-4 px-4 align-top text-center whitespace-nowrap">
                             <div class="flex items-center justify-center space-x-1.5">
-                                <button onclick="openEditModal(${item.id})" title="แก้ไข" class="w-8 h-8 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-600 flex items-center justify-center transition-colors">
-                                    <i class="fa-solid fa-pen text-xs"></i>
+                                <button onclick="openEditModal(${item.id})" title="แก้ไขข้อมูล" class="w-8 h-8 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-600 flex items-center justify-center transition-colors">
+                                    <i class="fa-solid fa-pen-to-square text-xs"></i>
                                 </button>
-                                <button onclick="openDeleteModal(${item.id})" title="ลบ" class="w-8 h-8 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 flex items-center justify-center transition-colors">
-                                    <i class="fa-solid fa-trash text-xs"></i>
+                                <button onclick="openDeleteModal(${item.id})" title="ลบข้อมูล" class="w-8 h-8 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 flex items-center justify-center transition-colors">
+                                    <i class="fa-solid fa-trash-can text-xs"></i>
                                 </button>
                             </div>
                         </td>
@@ -1950,29 +1975,32 @@
 
             if (mobileContainer) {
                 mobileContainer.innerHTML = pageData.map(item => {
-                    const authorFull = `${item.academic_position || ''} ${item.author_name || ''}`.trim();
+                    const authorFull = escapeHtml(`${item.academic_position || ''} ${item.author_name || ''}`.trim());
 
                     return `
                     <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3">
                         <div class="flex items-center justify-between">
-                            <span class="px-2.5 py-1 bg-blue-50 text-blue-600 font-bold font-mono text-xs rounded-lg">
-                                ${item.book_code || '-'}
+                            <span class="px-2.5 py-0.5 bg-blue-50 text-blue-600 rounded-full text-xs font-bold font-mono">
+                                ${escapeHtml(item.book_code) || '-'}
                             </span>
                             ${getStatusBadge(item.evaluation_status)}
                         </div>
-                        <h3 class="font-bold text-slate-900 text-sm leading-snug">${item.title || '-'}</h3>
-                        <div class="text-xs text-slate-500 space-y-1">
-                            ${authorFull ? `<p><i class="fa-solid fa-user-pen mr-1 text-slate-400"></i>${authorFull}</p>` : ''}
-                            ${item.department ? `<p><i class="fa-solid fa-landmark mr-1 text-slate-400"></i>${item.department}</p>` : ''}
-                        </div>
+                        <h3 class="font-bold text-slate-900 text-sm leading-snug cursor-pointer hover:text-blue-600" onclick="openDetailModal(${item.id})">
+                            ${escapeHtml(item.title) || '-'}
+                        </h3>
+                        <p class="text-xs text-slate-500">
+                            <i class="fa-solid fa-user-pen text-slate-400 mr-1"></i>${authorFull} (${escapeHtml(item.author_email) || '-'})
+                        </p>
                         <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
                             ${renderStaffFileButtons(item)}
-                            <div class="flex items-center space-x-1.5">
-                                <button onclick="openEditModal(${item.id})" class="px-3 py-1.5 bg-amber-50 text-amber-600 font-medium text-xs rounded-lg">
-                                    แก้ไข
+                            <div class="flex items-center space-x-2">
+                                <button onclick="openEditModal(${item.id})" class="px-3 py-1.5 bg-amber-50 text-amber-600 rounded-xl text-xs font-medium flex items-center space-x-1">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                    <span>แก้ไข</span>
                                 </button>
-                                <button onclick="openDeleteModal(${item.id})" class="px-3 py-1.5 bg-rose-50 text-rose-600 font-medium text-xs rounded-lg">
-                                    ลบ
+                                <button onclick="openDeleteModal(${item.id})" class="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-xl text-xs font-medium flex items-center space-x-1">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                    <span>ลบ</span>
                                 </button>
                             </div>
                         </div>
@@ -1984,22 +2012,17 @@
             renderPaginationControls('staffPagination', staffCurrentPage, staffFilteredData.length, 'changeStaffPage');
         }
 
+        // ================= TEACHER DASHBOARD & ACCESS CONTROL =================
         function filterTeacherData() {
-            const loggedInElem = document.getElementById('teacherLoggedInEmail');
-            if (loggedInElem) {
-                loggedInElem.innerText = currentUser?.email || 'teacher@kmitl.ac.th';
-            }
+            const loggedEmail = (currentUser?.email || '').toLowerCase().trim();
+            const elemEmail = document.getElementById('teacherLoggedInEmail');
+            if (elemEmail) elemEmail.innerText = loggedEmail || 'ไม่พบอีเมลผู้ใช้';
 
-            if (!currentUser || !currentUser.email) {
-                teacherFilteredData = [];
-                renderTeacherTable();
-                return;
-            }
-
-            const userEmail = currentUser.email.toLowerCase().trim();
+            // ดำเนินการจัดการเฉพาะ teacher@kmitl.ac.th และ author@kmitl.ac.th หรืออีเมลอาจารย์ที่เข้าสู่ระบบเท่านั้น
             let rawFiltered = evaluationsData.filter(item => {
+                if (!loggedEmail) return false;
                 const authorEmail = (item.author_email || '').toLowerCase().trim();
-                return authorEmail === userEmail;
+                return authorEmail === loggedEmail;
             });
 
             teacherFilteredData = sortByBookCodeDesc(rawFiltered);
@@ -2015,9 +2038,9 @@
             if (tableCount) tableCount.innerText = teacherFilteredData.length;
 
             if (teacherFilteredData.length === 0) {
-                if (tbody) tbody.innerHTML = `<tr><td colspan="4" class="text-center py-12 text-slate-400 font-light">ไม่พบรายการผลงานในอีเมลสถาบันนี้</td></tr>`;
+                if (tbody) tbody.innerHTML = `<tr><td colspan="4" class="text-center py-12 text-slate-400 font-light">ไม่พบผลงานของคุณในระบบ (ตรวจสอบอีเมล: ${escapeHtml(currentUser?.email || '-')})</td></tr>`;
                 if (mobileContainer) {
-                    mobileContainer.innerHTML = `<div class="text-center py-12 text-slate-400 font-light bg-white rounded-2xl border border-slate-100">ไม่พบรายการผลงานในอีเมลสถาบันนี้</div>`;
+                    mobileContainer.innerHTML = `<div class="text-center py-12 text-slate-400 font-light bg-white rounded-2xl border border-slate-100">ไม่พบผลงานของคุณในระบบ</div>`;
                 }
                 renderPaginationControls('teacherPagination', 1, 0, 'changeTeacherPage');
                 return;
@@ -2028,25 +2051,25 @@
 
             if (tbody) {
                 tbody.innerHTML = pageData.map(item => {
-                    const authorFull = `${item.academic_position || ''} ${item.author_name || ''}`.trim();
+                    const authorFull = escapeHtml(`${item.academic_position || ''} ${item.author_name || ''}`.trim());
 
                     return `
                     <tr class="hover:bg-slate-50/80 transition-colors">
-                        <td class="py-4 px-4 font-bold text-blue-600 font-mono text-xs align-top whitespace-nowrap">
-                            ${item.book_code || '-'}
+                        <td class="py-4 px-4 font-bold text-blue-600 font-mono text-xs align-top whitespace-nowrap cursor-pointer hover:underline" onclick="openDetailModal(${item.id})">
+                            ${escapeHtml(item.book_code) || '-'}
                         </td>
                         <td class="py-4 px-4 align-top whitespace-nowrap">
                             ${getStatusBadge(item.evaluation_status)}
                         </td>
-                        <td class="py-4 px-4 align-top cursor-pointer group" onclick="openDetailModal(${item.id})">
-                            <div class="space-y-1.5">
-                                <h4 class="font-bold text-slate-900 text-sm leading-snug group-hover:text-blue-600 transition-colors">
-                                    ${item.title || '-'}
+                        <td class="py-4 px-4 align-top">
+                            <div class="space-y-1">
+                                <h4 class="font-bold text-slate-900 text-base leading-snug cursor-pointer hover:text-blue-600" onclick="openDetailModal(${item.id})">
+                                    ${escapeHtml(item.title) || '-'}
                                 </h4>
-                                <div class="flex items-center flex-wrap gap-x-3 gap-y-1 text-slate-500 text-xs">
-                                    ${authorFull ? `<span><i class="fa-solid fa-user-pen mr-1 text-slate-400"></i>${authorFull}</span>` : ''}
-                                    ${item.department ? `<span><i class="fa-solid fa-landmark mr-1 text-slate-400"></i>${item.department}</span>` : ''}
-                                    ${item.evaluation_year ? `<span><i class="fa-regular fa-calendar-days mr-1 text-slate-400"></i>ปี ${item.evaluation_year}</span>` : ''}
+                                <div class="flex items-center flex-wrap gap-x-3 text-xs text-slate-500">
+                                    <span><i class="fa-solid fa-user-pen text-slate-400 mr-1"></i>${authorFull}</span>
+                                    <span>| ภาควิชา: ${escapeHtml(item.department) || '-'}</span>
+                                    <span>| ปีประเมิน: ${escapeHtml(item.evaluation_year) || '-'}</span>
                                 </div>
                             </div>
                         </td>
@@ -2060,22 +2083,23 @@
 
             if (mobileContainer) {
                 mobileContainer.innerHTML = pageData.map(item => {
-                    const authorFull = `${item.academic_position || ''} ${item.author_name || ''}`.trim();
+                    const authorFull = escapeHtml(`${item.academic_position || ''} ${item.author_name || ''}`.trim());
 
                     return `
                     <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 space-y-3">
                         <div class="flex items-center justify-between">
-                            <span class="px-2.5 py-1 bg-blue-50 text-blue-600 font-bold font-mono text-xs rounded-lg">
-                                ${item.book_code || '-'}
+                            <span class="px-2.5 py-0.5 bg-blue-50 text-blue-600 rounded-full text-xs font-bold font-mono">
+                                ${escapeHtml(item.book_code) || '-'}
                             </span>
                             ${getStatusBadge(item.evaluation_status)}
                         </div>
-                        <h3 class="font-bold text-slate-900 text-sm leading-snug cursor-pointer" onclick="openDetailModal(${item.id})">${item.title || '-'}</h3>
-                        <div class="text-xs text-slate-500 space-y-1">
-                            ${authorFull ? `<p><i class="fa-solid fa-user-pen mr-1 text-slate-400"></i>${authorFull}</p>` : ''}
-                            ${item.department ? `<p><i class="fa-solid fa-landmark mr-1 text-slate-400"></i>${item.department}</p>` : ''}
-                        </div>
-                        <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
+                        <h3 class="font-bold text-slate-900 text-sm leading-snug cursor-pointer hover:text-blue-600" onclick="openDetailModal(${item.id})">
+                            ${escapeHtml(item.title) || '-'}
+                        </h3>
+                        <p class="text-xs text-slate-500">
+                            <i class="fa-solid fa-user-pen text-slate-400 mr-1"></i>${authorFull}
+                        </p>
+                        <div class="pt-2 border-t border-slate-100">
                             ${renderTeacherFileButtons(item)}
                         </div>
                     </div>
@@ -2086,15 +2110,22 @@
             renderPaginationControls('teacherPagination', teacherCurrentPage, teacherFilteredData.length, 'changeTeacherPage');
         }
 
+        // ================= FORM & CRUD ACTIONS (STAFF ONLY) =================
         function openAddModal() {
+            if (currentUser?.role !== 'staff') {
+                showToast('เฉพาะเจ้าหน้าที่เท่านั้นที่สามารถจัดการข้อมูลได้', 'error');
+                return;
+            }
+
             document.getElementById('formModalTitle').innerText = 'เพิ่มผลงานใหม่';
             document.getElementById('formEditId').value = '';
-
+            
             document.getElementById('formYear').value = new Date().getFullYear() + 543;
             document.getElementById('formAcademicPos').value = '';
             document.getElementById('formAuthorName').value = '';
             document.getElementById('formAuthorEmail').value = '';
             document.getElementById('formWorkType').value = '';
+
             document.getElementById('formBookCode').value = '';
             document.getElementById('formDepartment').value = '';
             document.getElementById('formTitle').value = '';
@@ -2103,6 +2134,7 @@
             document.getElementById('formIsbn').value = '';
             document.getElementById('formVpsNo').value = '';
             document.getElementById('formNote').value = '';
+
             document.getElementById('formFileOriginal').value = '';
             document.getElementById('formFileCover').value = '';
             document.getElementById('formFileEvalReport').value = '';
@@ -2111,6 +2143,11 @@
         }
 
         function openEditModal(id) {
+            if (currentUser?.role !== 'staff') {
+                showToast('เฉพาะเจ้าหน้าที่เท่านั้นที่สามารถจัดการข้อมูลได้', 'error');
+                return;
+            }
+
             const item = evaluationsData.find(e => e.id === id);
             if (!item) return;
 
@@ -2122,6 +2159,7 @@
             document.getElementById('formAuthorName').value = item.author_name || '';
             document.getElementById('formAuthorEmail').value = item.author_email || '';
             document.getElementById('formWorkType').value = item.work_type || 'หนังสือ';
+
             document.getElementById('formBookCode').value = item.book_code || '';
             document.getElementById('formDepartment').value = item.department || '';
             document.getElementById('formTitle').value = item.title || '';
@@ -2130,6 +2168,7 @@
             document.getElementById('formIsbn').value = item.isbn || '';
             document.getElementById('formVpsNo').value = item.vps_no || '';
             document.getElementById('formNote').value = item.note || '';
+
             document.getElementById('formFileOriginal').value = item.file_original_url || '';
             document.getElementById('formFileCover').value = item.file_cover_url || '';
             document.getElementById('formFileEvalReport').value = item.file_eval_report_url || '';
@@ -2139,6 +2178,12 @@
 
         async function handleFormSubmit(e) {
             e.preventDefault();
+
+            if (currentUser?.role !== 'staff') {
+                showToast('เฉพาะเจ้าหน้าที่เท่านั้นที่สามารถบันทึกข้อมูลได้', 'error');
+                return;
+            }
+
             const editId = document.getElementById('formEditId').value;
 
             const payload = {
@@ -2147,17 +2192,19 @@
                 author_name: document.getElementById('formAuthorName').value.trim(),
                 author_email: document.getElementById('formAuthorEmail').value.trim().toLowerCase(),
                 work_type: document.getElementById('formWorkType').value,
+
                 book_code: document.getElementById('formBookCode').value.trim(),
                 department: document.getElementById('formDepartment').value.trim(),
                 title: document.getElementById('formTitle').value.trim(),
                 evaluation_status: document.getElementById('formEvalStatus').value,
                 publication_status: document.getElementById('formPubStatus').value,
-                isbn: document.getElementById('formIsbn').value.trim() || null,
-                vps_no: document.getElementById('formVpsNo').value.trim() || null,
-                note: document.getElementById('formNote').value.trim() || null,
-                file_original_url: document.getElementById('formFileOriginal').value.trim() || null,
-                file_cover_url: document.getElementById('formFileCover').value.trim() || null,
-                file_eval_report_url: document.getElementById('formFileEvalReport').value.trim() || null
+                isbn: document.getElementById('formIsbn').value.trim(),
+                vps_no: document.getElementById('formVpsNo').value.trim(),
+                note: document.getElementById('formNote').value.trim(),
+
+                file_original_url: document.getElementById('formFileOriginal').value.trim(),
+                file_cover_url: document.getElementById('formFileCover').value.trim(),
+                file_eval_report_url: document.getElementById('formFileEvalReport').value.trim()
             };
 
             try {
@@ -2168,25 +2215,29 @@
                         .eq('id', editId);
 
                     if (error) throw error;
-                    showToast('อัปเดตข้อมูลผลงานสำเร็จ');
+                    showToast('อัปเดตข้อมูลผลงานเรียบร้อยแล้ว');
                 } else {
                     const { error } = await supabaseClient
                         .from('evaluation')
                         .insert([payload]);
 
                     if (error) throw error;
-                    showToast('เพิ่มข้อมูลผลงานใหม่สำเร็จ');
+                    showToast('เพิ่มผลงานใหม่ลงระบบเรียบร้อยแล้ว');
                 }
 
                 closeModal('editModal');
                 await fetchEvaluations();
             } catch (err) {
-                console.error('Submit error:', err);
+                console.error('Save error:', err);
                 showToast('เกิดข้อผิดพลาดในการบันทึก: ' + err.message, 'error');
             }
         }
 
         function openDeleteModal(id) {
+            if (currentUser?.role !== 'staff') {
+                showToast('เฉพาะเจ้าหน้าที่เท่านั้นที่สามารถลบข้อมูลได้', 'error');
+                return;
+            }
             document.getElementById('deleteTargetId').value = id;
             openModal('deleteModal');
         }
@@ -2208,20 +2259,15 @@
                 await fetchEvaluations();
             } catch (err) {
                 console.error('Delete error:', err);
-                showToast('เกิดข้อผิดพลาดในการลบข้อมูล: ' + err.message, 'error');
+                showToast('เกิดข้อผิดพลาดในการลบ: ' + err.message, 'error');
             }
         }
 
         function copyIsbnText() {
-            const isbnText = document.getElementById('popupIsbn')?.innerText || '';
-            if (isbnText && isbnText !== '-') {
-                const textarea = document.createElement('textarea');
-                textarea.value = isbnText;
-                document.body.appendChild(textarea);
-                textarea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textarea);
-                showToast('คัดลอก ISBN เรียบร้อยแล้ว');
+            const isbn = document.getElementById('popupIsbn')?.innerText;
+            if (isbn && isbn !== '-') {
+                navigator.clipboard.writeText(isbn);
+                showToast('คัดลอกเลข ISBN เรียบร้อยแล้ว');
             }
         }
 
@@ -2231,23 +2277,23 @@
                 return;
             }
 
-            const headers = ['รหัสหนังสือ', 'ปีที่ประเมิน', 'ชื่อเรื่อง', 'ผู้เขียน', 'ตำแหน่งวิชาการ', 'อีเมลผู้เขียน', 'ภาควิชา', 'ประเภทผลงาน', 'สถานะประเมิน', 'สถานะจัดพิมพ์', 'ISBN', 'เลข วศ.สจล.'];
+            const headers = ['ID', 'รหัสหนังสือ', 'ชื่อเรื่อง', 'ตำแหน่งวิชาการ', 'ชื่อผู้เขียน', 'อีเมล', 'ภาควิชา', 'ปีประเมิน', 'สถานะประเมิน', 'สถานะจัดพิมพ์', 'ISBN'];
+            
             const rows = evaluationsData.map(item => [
-                `"${item.book_code || ''}"`,
-                `"${item.evaluation_year || ''}"`,
+                item.id,
+                `"${(item.book_code || '').replace(/"/g, '""')}"`,
                 `"${(item.title || '').replace(/"/g, '""')}"`,
+                `"${(item.academic_position || '').replace(/"/g, '""')}"`,
                 `"${(item.author_name || '').replace(/"/g, '""')}"`,
-                `"${item.academic_position || ''}"`,
-                `"${item.author_email || ''}"`,
-                `"${item.department || ''}"`,
-                `"${item.work_type || ''}"`,
-                `"${item.evaluation_status || ''}"`,
-                `"${item.publication_status || ''}"`,
-                `"${item.isbn || ''}"`,
-                `"${item.vps_no || ''}"`
+                `"${(item.author_email || '').replace(/"/g, '""')}"`,
+                `"${(item.department || '').replace(/"/g, '""')}"`,
+                item.evaluation_year || '',
+                `"${(item.evaluation_status || '').replace(/"/g, '""')}"`,
+                `"${(item.publication_status || '').replace(/"/g, '""')}"`,
+                `"${(item.isbn || '').replace(/"/g, '""')}"`
             ]);
 
-            const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+            const csvContent = "\uFEFF" + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
@@ -2256,7 +2302,7 @@
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            showToast('ส่งออก CSV เรียบร้อยแล้ว');
+            showToast('ส่งออกไฟล์ CSV เรียบร้อยแล้ว');
         }
     </script>
 </body>
