@@ -773,9 +773,17 @@
         const SUPABASE_KEY = APP_ENV.SUPABASE_KEY;
 
         let supabaseClient = null;
+
+        // Configuration Fix: Use sessionStorage instead of localStorage so session is destroyed on tab/browser close
         function initSupabase() {
             if (!supabaseClient && window.supabase) {
-                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+                    auth: {
+                        persistSession: true,
+                        storage: window.sessionStorage,
+                        autoRefreshToken: true
+                    }
+                });
             }
             return supabaseClient;
         }
@@ -790,7 +798,7 @@
                 .replace(/'/g, '&#039;');
         }
 
-        // Security Fix 1: Strictly Validate Allowed Protocol (HTTP/HTTPS Only)
+        // Security Fix: Strictly Validate Allowed Protocol (HTTP/HTTPS Only)
         function sanitizeUrl(url) {
             if (!url || typeof url !== 'string') return '#';
             const trimmed = url.trim();
@@ -2246,7 +2254,7 @@
             }
         }
 
-        // Security Fix 2: Prevent CSV Injection Attacks
+        // Security Fix: Prevent CSV Injection Attacks
         function exportToCSV() {
             if (!evaluationsData || evaluationsData.length === 0) {
                 showToast('ไม่มีข้อมูลสำหรับส่งออก CSV', 'error');
@@ -2257,7 +2265,7 @@
                 if (val === null || val === undefined) return '""';
                 let str = String(val).replace(/"/g, '""');
                 if (/^[=+\-@]\s*/.test(str)) {
-                    str = "'" + str; // Add single quote to neutralize formula injection
+                    str = "'" + str;
                 }
                 return `"${str}"`;
             };
