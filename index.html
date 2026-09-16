@@ -12,8 +12,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Supabase JS Client v2 -->
-    <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Supabase JS Client v2 (Removed defer for stable loading) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Chart.js for Donut Chart -->
     <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -533,9 +533,9 @@
         </div>
     </div>
 
-    <!-- 2. ADD / EDIT WORK MODAL -->
-    <div id="editModal" onclick="closeModalOnBackdrop(event, 'editModal')" class="fixed inset-0 z-50 hidden modal-backdrop flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-        <div onclick="event.stopPropagation()" class="bg-white w-[95%] sm:w-[90%] md:w-full max-w-3xl rounded-2xl sm:rounded-3xl shadow-2xl p-5 sm:p-8 my-auto max-h-[90vh] overflow-y-auto transform transition-all duration-200 relative">
+    <!-- 2. ADD / EDIT WORK MODAL (Auto Screen Size Responsive) -->
+    <div id="editModal" onclick="closeModalOnBackdrop(event, 'editModal')" class="fixed inset-0 z-50 hidden modal-backdrop flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto">
+        <div onclick="event.stopPropagation()" class="bg-white w-[95%] sm:w-[90%] md:w-full max-w-3xl lg:max-w-4xl rounded-2xl sm:rounded-3xl shadow-2xl p-5 sm:p-8 my-auto max-h-[90vh] overflow-y-auto transform transition-all duration-200 relative">
             <button type="button" onclick="closeModal('editModal')" aria-label="ปิดหน้าต่างเพิ่ม/แก้ไขข้อมูล" class="absolute top-4 right-4 sm:top-5 sm:right-5 text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors z-10">
                 <i class="fa-solid fa-xmark text-lg"></i>
             </button>
@@ -562,7 +562,7 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                             <label for="formYear" class="block text-xs font-medium text-slate-700 mb-1">ปีที่ทำการประเมิน *</label>
-                            <input type="number" id="formYear" name="evaluation_year" required placeholder="เช่น 2568" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs">
+                            <input type="number" id="formYear" name="evaluation_year" required placeholder="เช่น 2568" value="" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs">
                         </div>
                         <div>
                             <label for="formAcademicPos" class="block text-xs font-medium text-slate-700 mb-1">ตำแหน่งทางวิชาการ *</label>
@@ -574,7 +574,7 @@
                         </div>
                         <div>
                             <label for="formAuthorEmail" class="block text-xs font-medium text-slate-700 mb-1">อีเมลผู้ขอประเมิน (@kmitl.ac.th) *</label>
-                            <input type="email" id="formAuthorEmail" name="author_email" required placeholder="author@kmitl.ac.th" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs">
+                            <input type="email" id="formAuthorEmail" name="author_email" required placeholder="author@kmitl.ac.th" value="" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs">
                         </div>
                         <div class="sm:col-span-2">
                             <label for="formWorkType" class="block text-xs font-medium text-slate-700 mb-1">ประเภทผลงาน *</label>
@@ -826,10 +826,13 @@
         const SUPABASE_URL = APP_ENV.SUPABASE_URL;
         const SUPABASE_KEY = APP_ENV.SUPABASE_KEY;
 
-        // Initialize Supabase Client
+        // Initialize Supabase Client Safely
         let supabaseClient = null;
-        if (window.supabase) {
-            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        function initSupabase() {
+            if (!supabaseClient && window.supabase) {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            }
+            return supabaseClient;
         }
 
         // --- Helper: Security HTML Escaping to Prevent XSS ---
@@ -858,7 +861,7 @@
         let filteredData = [];
         let staffFilteredData = [];
         let teacherFilteredData = [];
-        let adminList = []; // ข้อมูลรายชื่อ Admin จากตาราง admin ใน Supabase
+        let adminList = [];
 
         let currentUser = null; 
         let currentRoleSelection = 'teacher';
@@ -873,24 +876,26 @@
         let teacherCurrentPage = 1;
 
         window.addEventListener('DOMContentLoaded', async () => {
-            if (!supabaseClient && window.supabase) {
-                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-            }
+            initSupabase();
             
             await fetchAdminList();
             await fetchEvaluations();
 
             // ตรวจสอบ Session ปัจจุบันใน Supabase
             if (supabaseClient) {
-                const { data: { session } } = await supabaseClient.auth.getSession();
-                if (session?.user) {
-                    const isUserAdmin = checkIsAdmin(session.user.email, session.user.id);
-                    currentUser = {
-                        email: session.user.email,
-                        role: isUserAdmin ? 'staff' : (session.user.user_metadata?.role || 'teacher'),
-                        id: session.user.id
-                    };
-                    updateUI();
+                try {
+                    const { data: { session } } = await supabaseClient.auth.getSession();
+                    if (session?.user) {
+                        const isUserAdmin = checkIsAdmin(session.user.email, session.user.id);
+                        currentUser = {
+                            email: session.user.email,
+                            role: isUserAdmin ? 'staff' : (session.user.user_metadata?.role || 'teacher'),
+                            id: session.user.id
+                        };
+                        updateUI();
+                    }
+                } catch (e) {
+                    console.warn("Auth Session Error:", e);
                 }
 
                 // ดักจับ Event ลิงก์ Reset Password จากอีเมลเมื่อเปิดเว็บ
@@ -924,9 +929,10 @@
         });
 
         async function fetchAdminList() {
-            if (!supabaseClient) return;
+            const client = initSupabase();
+            if (!client) return;
             try {
-                const { data, error } = await supabaseClient
+                const { data, error } = await client
                     .from('admin')
                     .select('*');
 
@@ -1214,6 +1220,9 @@
 
         async function handleAuthSubmit(e) {
             e.preventDefault();
+            const client = initSupabase();
+            if (!client) return;
+
             const emailInput = document.getElementById('loginEmail')?.value.trim().toLowerCase() || '';
             const passwordInput = document.getElementById('loginPassword')?.value || '';
             const confirmPasswordInput = document.getElementById('loginConfirmPassword')?.value || '';
@@ -1239,7 +1248,7 @@
                 if (currentAuthMode === 'login') {
                     if (!passwordInput) throw new Error('กรุณากรอกรหัสผ่าน');
 
-                    const { data, error } = await supabaseClient.auth.signInWithPassword({
+                    const { data, error } = await client.auth.signInWithPassword({
                         email: emailInput,
                         password: passwordInput,
                     });
@@ -1266,7 +1275,7 @@
                     if (!passwordInput || passwordInput.length < 6) throw new Error('รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร');
                     if (passwordInput !== confirmPasswordInput) throw new Error('รหัสผ่านยืนยันไม่ตรงกัน');
 
-                    const { data, error } = await supabaseClient.auth.signUp({
+                    const { data, error } = await client.auth.signUp({
                         email: emailInput,
                         password: passwordInput,
                         options: { data: { role: currentRoleSelection } }
@@ -1278,7 +1287,7 @@
 
                 } else if (currentAuthMode === 'forgot') {
                     const redirectUrl = window.location.origin + window.location.pathname;
-                    const { data, error } = await supabaseClient.auth.resetPasswordForEmail(emailInput, { redirectTo: redirectUrl });
+                    const { data, error } = await client.auth.resetPasswordForEmail(emailInput, { redirectTo: redirectUrl });
                     if (error) throw error;
 
                     showToast('ส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมลของคุณเรียบร้อยแล้ว');
@@ -1288,7 +1297,7 @@
                     if (!passwordInput || passwordInput.length < 6) throw new Error('รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 6 ตัวอักษร');
                     if (passwordInput !== confirmPasswordInput) throw new Error('รหัสผ่านยืนยันไม่ตรงกัน');
 
-                    const { data, error } = await supabaseClient.auth.updateUser({ password: passwordInput });
+                    const { data, error } = await client.auth.updateUser({ password: passwordInput });
                     if (error) throw error;
 
                     showToast('ตั้งรหัสผ่านใหม่สำเร็จแล้ว กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่');
@@ -1314,8 +1323,9 @@
         }
 
         async function handleLogout() {
-            if (supabaseClient) {
-                await supabaseClient.auth.signOut();
+            const client = initSupabase();
+            if (client) {
+                await client.auth.signOut();
             }
             currentUser = { email: '', role: 'guest' };
             switchView('home');
@@ -1323,9 +1333,13 @@
         }
 
         async function fetchEvaluations() {
-            if (!supabaseClient) return;
+            const client = initSupabase();
+            if (!client) {
+                console.warn('Supabase Client ยังไม่พร้อมใช้งาน');
+                return;
+            }
             try {
-                const { data, error } = await supabaseClient
+                const { data, error } = await client
                     .from('evaluation')
                     .select('*');
 
@@ -1879,9 +1893,6 @@
             openModal('detailModal');
         }
 
-        /**
-         * Render file download icons with gray disabled state when link is empty/null
-         */
         function renderFileIcons(item) {
             const origUrl = item.file_original_url ? convertGoogleDriveLink(item.file_original_url) : null;
             const coverUrl = item.file_cover_url ? convertGoogleDriveLink(item.file_cover_url) : null;
@@ -2177,16 +2188,16 @@
             document.getElementById('formModalTitle').innerText = 'เพิ่มผลงานใหม่';
             document.getElementById('formEditId').value = '';
             
-            document.getElementById('formYear').value = new Date().getFullYear() + 543;
+            document.getElementById('formYear').value = '';
             document.getElementById('formAcademicPos').value = '';
             document.getElementById('formAuthorName').value = '';
-            document.getElementById('formAuthorEmail').value = currentUser?.email || '';
-            document.getElementById('formWorkType').value = 'หนังสือ';
+            document.getElementById('formAuthorEmail').value = '';
+            document.getElementById('formWorkType').value = '';
             document.getElementById('formBookCode').value = '';
             document.getElementById('formDepartment').value = '';
             document.getElementById('formTitle').value = '';
-            document.getElementById('formEvalStatus').value = 'รับเอกสารการประเมิน';
-            document.getElementById('formPubStatus').value = 'อยู่ระหว่างการประเมิน';
+            document.getElementById('formEvalStatus').value = '';
+            document.getElementById('formPubStatus').value = '';
             document.getElementById('formIsbn').value = '';
             document.getElementById('formVpsNo').value = '';
             document.getElementById('formNote').value = '';
@@ -2231,7 +2242,8 @@
 
         async function handleFormSubmit(e) {
             e.preventDefault();
-            if (!supabaseClient) return;
+            const client = initSupabase();
+            if (!client) return;
 
             const id = document.getElementById('formEditId').value;
             const payload = {
@@ -2255,14 +2267,14 @@
 
             try {
                 if (id) {
-                    const { error } = await supabaseClient
+                    const { error } = await client
                         .from('evaluation')
                         .update(payload)
                         .eq('id', id);
                     if (error) throw error;
                     showToast('แก้ไขข้อมูลเรียบร้อยแล้ว');
                 } else {
-                    const { error } = await supabaseClient
+                    const { error } = await client
                         .from('evaluation')
                         .insert([payload]);
                     if (error) throw error;
@@ -2278,12 +2290,14 @@
         }
 
         async function confirmDeleteEvaluation() {
-            if (!supabaseClient) return;
+            const client = initSupabase();
+            if (!client) return;
+
             const id = document.getElementById('deleteTargetId').value;
             if (!id) return;
 
             try {
-                const { error } = await supabaseClient
+                const { error } = await client
                     .from('evaluation')
                     .delete()
                     .eq('id', id);
