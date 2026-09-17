@@ -789,6 +789,11 @@
             return supabaseClient;
         }
 
+        // Helper: ตรวจสอบสิทธิ์ระดับ Client-Side Guard
+        function isStaffAuthenticated() {
+            return currentUser && currentUser.role === 'staff';
+        }
+
         function escapeHtml(str) {
             if (str === null || str === undefined) return '';
             return String(str)
@@ -1381,10 +1386,10 @@
             if (viewName === 'home') {
                 if (homeView) homeView.classList.remove('hidden');
                 filterData();
-            } else if (viewName === 'staff' && currentUser?.role === 'staff') {
+            } else if (viewName === 'staff' && isStaffAuthenticated()) {
                 if (staffView) staffView.classList.remove('hidden');
                 filterStaffData();
-            } else if (viewName === 'teacher' && currentUser?.role === 'teacher') {
+            } else if (viewName === 'teacher' && currentUser && currentUser.role === 'teacher') {
                 if (teacherView) teacherView.classList.remove('hidden');
                 filterTeacherData();
             } else {
@@ -1433,6 +1438,12 @@
         }
 
         function filterStaffData() {
+            if (!isStaffAuthenticated()) {
+                staffFilteredData = [];
+                renderStaffTable();
+                return;
+            }
+
             const search = (document.getElementById('staffSearchInput')?.value || '').toLowerCase();
             const year = document.getElementById('staffYearFilter')?.value || '';
             const dept = document.getElementById('staffDeptFilter')?.value || '';
@@ -2127,6 +2138,11 @@
         }
 
         function openAddModal() {
+            if (!isStaffAuthenticated()) {
+                showToast('คุณไม่มีสิทธิ์ในการทำรายการนี้', 'error');
+                return;
+            }
+
             const form = document.querySelector('#editModal form');
             if (form) form.reset();
             const editId = document.getElementById('formEditId');
@@ -2139,6 +2155,11 @@
         }
 
         function openEditModal(id) {
+            if (!isStaffAuthenticated()) {
+                showToast('คุณไม่มีสิทธิ์ในการทำรายการนี้', 'error');
+                return;
+            }
+
             const item = evaluationsData.find(e => e.id === id);
             if (!item) return;
 
@@ -2170,6 +2191,12 @@
 
         async function handleFormSubmit(e) {
             e.preventDefault();
+
+            if (!isStaffAuthenticated()) {
+                showToast('คุณไม่มีสิทธิ์ในการจัดการข้อมูล', 'error');
+                return;
+            }
+
             const client = initSupabase();
             if (!client) {
                 showToast('ไม่พบการเชื่อมต่อ Supabase', 'error');
@@ -2225,11 +2252,21 @@
         }
 
         function openDeleteModal(id) {
+            if (!isStaffAuthenticated()) {
+                showToast('คุณไม่มีสิทธิ์ในการลบข้อมูล', 'error');
+                return;
+            }
+
             document.getElementById('deleteTargetId').value = id;
             openModal('deleteModal');
         }
 
         async function confirmDeleteEvaluation() {
+            if (!isStaffAuthenticated()) {
+                showToast('คุณไม่มีสิทธิ์ในการลบข้อมูล', 'error');
+                return;
+            }
+
             const client = initSupabase();
             const id = document.getElementById('deleteTargetId').value;
             if (!client || !id) return;
@@ -2260,6 +2297,11 @@
         }
 
         function exportToCSV() {
+            if (!isStaffAuthenticated()) {
+                showToast('คุณไม่มีสิทธิ์ในการส่งออกข้อมูล', 'error');
+                return;
+            }
+
             if (!evaluationsData || evaluationsData.length === 0) {
                 showToast('ไม่มีข้อมูลสำหรับการส่งออก', 'error');
                 return;
