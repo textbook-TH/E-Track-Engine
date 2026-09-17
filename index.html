@@ -777,7 +777,14 @@
         let supabaseClient = null;
         function initSupabase() {
             if (!supabaseClient && window.supabase) {
-                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                // บังคับใช้ sessionStorage เพื่อให้ระบบเคลียร์ Session ทันทีที่ปิดเบราว์เซอร์/ปิดแท็บ
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+                    auth: {
+                        storage: window.sessionStorage,
+                        persistSession: true,
+                        autoRefreshToken: true
+                    }
+                });
             }
             return supabaseClient;
         }
@@ -792,7 +799,6 @@
                 .replace(/'/g, '&#039;');
         }
 
-        // Security Fix 1: Strictly Validate Allowed Protocol (HTTP/HTTPS Only)
         function sanitizeUrl(url) {
             if (!url || typeof url !== 'string') return '#';
             const trimmed = url.trim();
@@ -853,7 +859,7 @@
                         const isUserAdmin = checkIsAdmin(session.user.email, session.user.id);
                         currentUser = {
                             email: session.user.email,
-                            role: isUserAdmin ? 'staff' : (session.user.user_metadata?.role || 'teacher'),
+                            role: isUserAdmin ? 'staff' : (session.user.user_metadata?.role || currentRoleSelection),
                             id: session.user.id
                         };
                         updateUI();
@@ -1300,9 +1306,6 @@
             filterTeacherData();
         }
 
-        /* ----------------------------------------------------
-           1. Header Nav Capsule Fix for Mobile (Icons only)
-           ---------------------------------------------------- */
         function renderNavbar() {
             const capsule = document.getElementById('navCapsule');
             if (!capsule) return;
